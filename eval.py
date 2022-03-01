@@ -1,26 +1,32 @@
-import argparse
 import json
 import time
 from collections import defaultdict
-
+import torch
 import numpy as np
 import pandas as pd
 from sklearn.metrics import f1_score, precision_score, recall_score
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
+from utils_args import create_parser
 from modeling.sgc import get_sgc_embedding
 from modeling.utils_modeling import get_baseline_embedding
 
+from modeling.scoring_models import LinearScoring, IdentityScoring
 
-def get_prediction(expansion_embeddings, acronym, target, acronym_to_expansion):
+
+def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
+    with torch.no_grad():
+        target = scoring_model(torch.Tensor(target / np.linalg.norm(target)).to(device))
+    target = target / torch.norm(target)
+
     preds = {}
     for expansion in acronym_to_expansion[acronym]:
-        embed = expansion_embeddings[expansion]
-        score = embed @ target / np.linalg.norm(target)
-        if type(score) == np.ndarray:
-            score = np.median(score)
-        preds[expansion] = score
+        embed = torch.Tensor(expansion_embeddings[expansion]).to(device)
+        score = embed @ target
+        if len(score.shape) >= 1:
+            score = torch.median(score)
+        preds[expansion] = score.cpu().item()
 
     best = max(preds, key=preds.get)
     return preds, best
@@ -62,6 +68,11 @@ def eval(filename, args, logfile):
 
     model = AutoModel.from_pretrained(args.model).to(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+    if args.scoring_model:
+        scoring_model = LinearScoring(model.config.hidden_size, model.config.hidden_size).to(args.device)
+        scoring_model.load_state_dict(torch.load(args.scoring_model))
+    else:
+        scoring_model = IdentityScoring().to(args.device)
 
     correct = 0
     prediction_by_acronym = defaultdict(list)
@@ -81,7 +92,7 @@ def eval(filename, args, logfile):
         elif args.mode == "Baseline":
             target = get_baseline_embedding(model, tokenizer, args.device, text)
 
-        preds, best = get_prediction(expansion_embeddings, acronym, target, acronym_to_expansion)
+        preds, best = get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device)
         prediction_by_acronym[acronym].append(best)
         gold_by_acronym[acronym].append(gold_expansion)
         if best == gold_expansion:
@@ -95,19 +106,8 @@ def eval(filename, args, logfile):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate the performance of the algorithm.")
-    parser.add_argument("-f", "--file", help="The dataset to evaluate on.", required=True)
-    parser.add_argument("-k", "--k", help="The number of convolutions to use.", default=4, type=int)
-    parser.add_argument("-l", "--levels", help="The number of levels to expand to.", default=2, type=int)
-    parser.add_argument("-d", "--device", help="The device to run on.", default="cuda:1")
-    parser.add_argument("-m", "--model", help="The model to use.", default="allenai/specter")
-    parser.add_argument("--mode", help="The mode to use.", default="SGC")
-    parser.add_argument("--max_examples", type=int, help="The maximum number of examples to use.", default=100)
-    parser.add_argument(
-        "--expansion_embeddings_path",
-        help="The expansion embeddings to use.",
-        default="sciad_data/expansion_embeddings_normalized_specter_cls.npy",
-    )
+    parser = create_parser()
+    parser.add_argument("--scoring_model", default=None, type=str, help="Path to scoring model")
     args = parser.parse_args()
 
     logfile = f"logs/{time.strftime('%Y%m%d-%H%M%S')}.txt"
