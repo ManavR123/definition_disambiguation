@@ -36,6 +36,7 @@ def train(args):
 
     wandb.init(project="acronym_disambiguation")
     wandb.config.update(args)
+    filename = f"models/scoring_model_{time.strftime('%Y%m%d-%H%M%S')}.pt"
 
     model = AutoModel.from_pretrained(args.model).to(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -73,9 +74,8 @@ def train(args):
 
             step += 1
 
-    filename = f"models/scoring_model_{time.strftime('%Y%m%d-%H%M%S')}.pt"
-    torch.save(scoring_model.state_dict(), filename)
-    wandb.save(filename)
+        torch.save(scoring_model.state_dict(), filename)
+        wandb.save(filename)
 
 
 if __name__ == "__main__":

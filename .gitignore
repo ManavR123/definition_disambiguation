@@ -113,6 +113,8 @@ setup.sh
 
 output/*
 logs/*
+models/*
+wandb/*
 elasticsearch*
 20200705v1/*
 *.npy
