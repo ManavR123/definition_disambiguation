@@ -1,6 +1,4 @@
-from fileinput import filename
 import json
-from isort import file
 import torch
 import torch.nn.functional as F
 import numpy as np
@@ -41,6 +39,8 @@ def train(args):
     model = AutoModel.from_pretrained(args.model).to(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     scoring_model = LinearScoring(model.config.hidden_size, model.config.hidden_size).to(args.device)
+    if args.saved_model:
+        scoring_model.load_state_dict(torch.load(args.saved_model))
     optim = torch.optim.Adam(scoring_model.parameters())
 
     wandb.watch(scoring_model)
@@ -83,5 +83,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, help="The number of epochs to train for.", default=10)
     parser.add_argument("--batch_size", type=int, help="The batch size to use.", default=32)
     parser.add_argument("--log_every", type=int, help="The number of steps to log.", default=100)
+    parser.add_argument("--saved_model", type=str, help="The path to a saved model to load.", default=None)
     args = parser.parse_args()
     train(args)
