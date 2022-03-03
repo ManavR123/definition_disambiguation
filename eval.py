@@ -118,5 +118,6 @@ if __name__ == "__main__":
         print(f"Expansion Embeddings: {args.expansion_embeddings_path}", file=f)
         print(f"Max Examples: {args.max_examples}", file=f)
         print(f"Model: {args.model}", file=f)
+        print(f"Scoring Model: {args.scoring_model if args.scoring_model else 'Identity'}", file=f)
 
     eval(args.file, args, logfile)
