@@ -11,7 +11,7 @@ es = Elasticsearch(hosts=["http://localhost:9200"], timeout=60, retry_on_timeout
 # Add the paper metadata to the index first then update each entry with the pdf_parses
 # not all papers have pdf_parses so it makes sense to add the metadata first
 print("Loading metadata")
-with open(f"metadata.jsonl") as f_meta:
+with open(f"indexing/metadata.jsonl") as f_meta:
     rows = []
     for i, line in tqdm(enumerate(f_meta)):
         metadata_dict = json.loads(line)
@@ -33,7 +33,7 @@ helpers.bulk(es, rows)
 print(f"Added batch in {(time.time() - start) / 60} minutes")
 
 print("Loading pdf_parses")
-with open(f"pdf_parses.jsonl") as f_pdf:
+with open(f"indexing/pdf_parses.jsonl") as f_pdf:
     for i, line in tqdm(enumerate(f_pdf)):
         pdf_parse_dict = json.loads(line)
         data = {}
