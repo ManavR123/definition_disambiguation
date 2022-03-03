@@ -86,7 +86,7 @@ def delete_index():
     print("Index deleted")
 
 
-def search(text_query, limit=1):
+def search(text_query, fields=None, limit=1):
     """Performs a phrase query across the title, abstract, and pdf_parse fields
 
     Args:
@@ -96,10 +96,12 @@ def search(text_query, limit=1):
     Returns:
         list: A list of dicts containing the found papers
     """
+    if fields is None:
+        fields = ["title", "abstract", "pdf_parse"]
     query = {
         "multi_match": {
             "query": f'"{text_query}"',
-            "fields": ["title", "abstract", "pdf_parse"],
+            "fields": fields,
             "type": "phrase",
         }
     }
