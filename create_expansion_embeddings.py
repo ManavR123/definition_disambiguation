@@ -6,9 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-from indexing.utils_index import search
 from modeling.utils_modeling import get_embeddings
-
 
 
 def create_embeddings(args):
@@ -22,19 +20,14 @@ def create_embeddings(args):
     with open("sciad_data/diction.json") as f:
         diction = json.load(f)
 
-    expansions = []
-    for exps in diction.values():
-        expansions.extend(exps)
+    print("Loading examples sentences...")
+    expansion_to_sents = {}
+    with open(args.expansions_to_sents, "r") as f:
+        expansion_to_sents = json.load(f)
 
-    for expansion in tqdm(expansions):
-        sents = [expansion]
-
-        results = [] if args.expansion_only else search(expansion, ["pdf_parse"], 100)
-        for result in results:
-            for para in result.get("pdf_parse", []):
-                if expansion in para.lower():
-                    sents.append(para)
-
+    print("Creating embeddings...")
+    for expansion in tqdm(expansion_to_sents):
+        sents = [expansion] if args.expansion_only else expansion_to_sents[expansion]
         if len(sents) > 100:
             sents = random.sample(sents, 100)
 
@@ -53,10 +46,11 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=str, default="expansion_embeddings")
     parser.add_argument("--device", type=str, default="cuda:1")
     parser.add_argument("--model", type=str, default="allenai/specter")
-    parser.add_argument("--mode", type=str, default="CLS")
+    parser.add_argument("--mode", type=str, default="mean")
     parser.add_argument("--expansion_only", action="store_true")
     parser.add_argument("--no_average", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--expansions_to_sents", type=str, default="sciad_data/expansions_to_sents.json")
     args = parser.parse_args()
 
     create_embeddings(args)
