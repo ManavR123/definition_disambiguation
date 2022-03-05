@@ -1,18 +1,18 @@
 import json
 import time
 from collections import defaultdict
-import torch
+
 import numpy as np
 import pandas as pd
+import torch
 from sklearn.metrics import f1_score, precision_score, recall_score
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
-from utils_args import create_parser
+from modeling.scoring_models import IdentityScoring, LinearScoring
 from modeling.sgc import get_sgc_embedding
 from modeling.utils_modeling import get_baseline_embedding
-
-from modeling.scoring_models import LinearScoring, IdentityScoring
+from utils_args import create_parser
 
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):

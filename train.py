@@ -1,15 +1,17 @@
 import json
-import torch
-import torch.nn.functional as F
+import time
+
 import numpy as np
 import pandas as pd
+import torch
+import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
-from modeling.scoring_models import LinearScoring
+
 import wandb
-import time
-from utils_args import create_parser
+from modeling.scoring_models import LinearScoring
 from modeling.sgc import get_sgc_embedding
+from utils_args import create_parser
 
 
 def get_loss(expansion_embeddings, scoring_model, acronym, target, gold_expansion, acronym_to_expansion, device):

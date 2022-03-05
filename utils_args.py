@@ -1,5 +1,6 @@
 import argparse
 
+
 def create_parser():
     parser = argparse.ArgumentParser(description="Evaluate the performance of the algorithm.")
     parser.add_argument("-f", "--file", help="The dataset to evaluate on.", required=True)
