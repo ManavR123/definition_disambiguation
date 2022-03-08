@@ -35,7 +35,7 @@ def train_embeddings(args):
     step = 0
     total_loss = 0
     for _ in range(args.num_epochs):
-        for expansions in tqdm(diction.values()):
+        for acronym, expansions in tqdm(diction.items()):
             if len(expansions) > 3:
                 expansions = random.sample(expansions, 3)
             expansion_embeddings = torch.zeros(len(expansions), model.config.hidden_size)
@@ -48,7 +48,15 @@ def train_embeddings(args):
                 if len(sents) > args.batch_size:
                     sents = random.sample(sents, args.batch_size)
 
-                embeddings = get_embeddings(model, tokenizer, sents, args.device, args.mode, is_train=True)
+                embeddings = get_embeddings(
+                    model,
+                    tokenizer,
+                    acronym,
+                    sents,
+                    args.device,
+                    args.mode,
+                    is_train=True,
+                )
                 embeddings = F.normalize(embeddings, dim=1)
                 loss -= torch.sum(embeddings @ embeddings.T) - len(sents)
                 expansion_embeddings[expansions.index(expansion)] = F.normalize(embeddings.mean(dim=0), dim=0)

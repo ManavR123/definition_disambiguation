@@ -29,16 +29,16 @@ def create_embeddings(args):
     expansion_to_sents = {}
     with open(args.expansions_to_sents, "r") as f:
         expansion_to_sents = json.load(f)
-
     print("Creating embeddings...")
     for expansion in tqdm(expansion_to_sents):
+        acronym = expansion_to_acronym[expansion].lower()
         sents = [expansion.lower()] if args.expansion_only else expansion_to_sents[expansion]
         if len(sents) > 100:
             sents = random.sample(sents, 100)
-            if args.replace_expansion:
-                sents = [s.lower().replace(expansion.lower(), expansion_to_acronym[expansion]) for s in sents]
+        if args.replace_expansion:
+            sents = [s.lower().replace(expansion.lower(), f" {acronym} ") for s in sents]
 
-        embeddings = get_embeddings(model, tokenizer, sents, args.device, args.mode).cpu().numpy()
+        embeddings = get_embeddings(model, tokenizer, acronym, sents, args.device, args.mode).cpu().numpy()
 
         if args.no_average:
             expansion_embeddings[expansion] = embeddings
