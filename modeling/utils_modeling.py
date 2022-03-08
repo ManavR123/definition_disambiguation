@@ -23,6 +23,16 @@ def get_word_idx(acronym, sents):
     return word_idx
 
 
+def get_word_mask(inputs, device, word_idx):
+    mask = np.zeros((inputs["input_ids"].size(0), inputs["input_ids"].size(1)))
+    for i, idx in enumerate(word_idx):
+        if idx is not None:
+            mask[i] = np.array(inputs.word_ids(i)) == idx
+        else:
+            mask[i] = inputs["attention_mask"][i].cpu().numpy()
+    return torch.Tensor(mask).to(device)
+
+
 def pool_embeddings(mode, acronym, sents, inputs, result, device):
     if mode == "CLS":
         embeds = result.last_hidden_state[:, 0, :]
@@ -31,9 +41,7 @@ def pool_embeddings(mode, acronym, sents, inputs, result, device):
         embeds = mask_embeds(result.last_hidden_state, mask)
     elif mode == "acronym":
         word_idx = get_word_idx(acronym, sents)
-        mask = torch.Tensor(np.array([np.array(inputs.word_ids(i)) == idx for i, idx in enumerate(word_idx)])).to(
-            device
-        )
+        mask = get_word_mask(inputs, device, word_idx)
         embeds = mask_embeds(result.last_hidden_state, mask)
     embeds = F.normalize(embeds, p=2, dim=1)
     return embeds
