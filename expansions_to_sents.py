@@ -22,8 +22,8 @@ for expansion in tqdm(all_expansions):
             para_sents = sent_tokenize(para)
             for sent in para_sents:
                 if expansion.lower() in sent.lower():
-                    sents.append(para)
+                    sents.append(sent)
     expansion_to_sents[expansion] = sents
 
-with open("expansions_to_sents.json", "w") as f:
+with open("sciad_data/expansions_to_sents.json", "w") as f:
     json.dump(expansion_to_sents, f)
