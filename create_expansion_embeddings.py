@@ -20,6 +20,11 @@ def create_embeddings(args):
     with open("sciad_data/diction.json") as f:
         diction = json.load(f)
 
+    expansion_to_acronym = {}
+    for acronym in diction:
+        for expansion in diction[acronym]:
+            expansion_to_acronym[expansion] = acronym
+
     print("Loading examples sentences...")
     expansion_to_sents = {}
     with open(args.expansions_to_sents, "r") as f:
@@ -27,9 +32,11 @@ def create_embeddings(args):
 
     print("Creating embeddings...")
     for expansion in tqdm(expansion_to_sents):
-        sents = [expansion] if args.expansion_only else expansion_to_sents[expansion]
+        sents = [expansion.lower()] if args.expansion_only else expansion_to_sents[expansion]
         if len(sents) > 100:
             sents = random.sample(sents, 100)
+            if args.replace_expansion:
+                sents = [s.lower().replace(expansion.lower(), expansion_to_acronym[expansion]) for s in sents]
 
         embeddings = get_embeddings(model, tokenizer, sents, args.device, args.mode).cpu().numpy()
 
@@ -45,12 +52,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser("Create embeddings for acronym expansions")
     parser.add_argument("--output", type=str, default="expansion_embeddings")
     parser.add_argument("--device", type=str, default="cuda:1")
-    parser.add_argument("--model", type=str, default="allenai/specter")
+    parser.add_argument("--model", type=str, default="sentence-transformers/all-mpnet-base-v2")
     parser.add_argument("--mode", type=str, default="mean")
     parser.add_argument("--expansion_only", action="store_true")
     parser.add_argument("--no_average", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--expansions_to_sents", type=str, default="sciad_data/expansions_to_sents.json")
+    parser.add_argument("--replace_expansion", action="store_true")
     args = parser.parse_args()
 
     create_embeddings(args)
