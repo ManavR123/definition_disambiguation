@@ -57,5 +57,5 @@ def get_embeddings(model, tokenizer, acronym, sents, device, mode, is_train=Fals
     return pool_embeddings(mode, acronym, sents, inputs, result, device)
 
 
-def get_baseline_embedding(model, tokenizer, acronym, device, text):
-    return get_embeddings(model, tokenizer, acronym, [text], device, "acronym")[0]
+def get_baseline_embedding(model, tokenizer, acronym, device, text, embedding_mode):
+    return get_embeddings(model, tokenizer, acronym, [text], device, embedding_mode)[0].cpu().numpy()

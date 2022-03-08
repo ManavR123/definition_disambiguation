@@ -60,7 +60,7 @@ def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
 
 
 def eval(filename, args, logfile):
-    assert args.mode in ["SGC", "Baseline"], f"Mode must be either SGC or Baseline\nGot: {args.mode}"
+    assert args.graph_mode in ["SGC", "Baseline"], f"Mode must be either SGC or Baseline\nGot: {args.graph_mode}"
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
     with open("sciad_data/diction.json") as f:
         acronym_to_expansion = json.load(f)
@@ -85,12 +85,12 @@ def eval(filename, args, logfile):
         text = row["text"]
 
         target = None
-        if args.mode == "SGC":
+        if args.graph_mode == "SGC":
             target, G = get_sgc_embedding(
-                model, tokenizer, args.device, acronym, paper_data, text, args.k, args.levels, args.max_examples
+                model, tokenizer, args.device, acronym, paper_data, text, args.k, args.levels, args.max_examples, args.embedding_mode
             )
-        elif args.mode == "Baseline":
-            target = get_baseline_embedding(model, tokenizer, args.device, text)
+        elif args.graph_mode == "Baseline":
+            target = get_baseline_embedding(model, tokenizer, args.device, text, args.embedding_mode)
 
         preds, best = get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device)
         prediction_by_acronym[acronym].append(best)
@@ -99,7 +99,7 @@ def eval(filename, args, logfile):
             correct += 1
         else:
             record_error(
-                args.mode, logfile, gold_expansion, paper_id, text, len(G) if args.mode == "SGC" else None, preds, best
+                args.graph_mode, logfile, gold_expansion, paper_id, text, len(G) if args.graph_mode == "SGC" else None, preds, best
             )
 
     record_results(logfile, correct / len(df), prediction_by_acronym, gold_by_acronym)
@@ -112,12 +112,13 @@ if __name__ == "__main__":
 
     logfile = f"logs/{time.strftime('%Y%m%d-%H%M%S')}.txt"
     with open(logfile, "w") as f:
-        mode_text = f"SGC with k = {args.k}, levels = {args.levels}" if args.mode == "SGC" else "Baseline"
+        mode_text = f"SGC with k = {args.k}, levels = {args.levels}" if args.graph_mode == "SGC" else "Baseline"
         print(f"Evaluating on {args.file}", file=f)
         print(f"Mode: {mode_text}", file=f)
         print(f"Expansion Embeddings: {args.expansion_embeddings_path}", file=f)
         print(f"Max Examples: {args.max_examples}", file=f)
         print(f"Model: {args.model}", file=f)
         print(f"Scoring Model: {args.scoring_model if args.scoring_model else 'Identity'}", file=f)
+        print(f"Embedding Mode: {args.embedding_mode}", file=f)
 
     eval(args.file, args, logfile)

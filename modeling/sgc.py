@@ -28,13 +28,13 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     return torch.sparse.FloatTensor(indices, values, shape)
 
 
-def add_embeddings_to_graph(G, data, acronym, model, tokenizer, device, batch_size=256):
+def add_embeddings_to_graph(G, data, acronym, model, tokenizer, device, embedding_mode, batch_size=256):
     nodes = list(data.keys())
     sents = [data[node] for node in nodes]
 
     for i in range(0, len(nodes), batch_size):
         batch = sents[i : i + batch_size]
-        embeddings = get_embeddings(model, tokenizer, acronym, batch, device, mode="acronym").cpu().numpy()
+        embeddings = get_embeddings(model, tokenizer, acronym, batch, device, embedding_mode).cpu().numpy()
         for j, node in enumerate(nodes[i : i + batch_size]):
             G.nodes[node]["sent"] = batch[j]
             G.nodes[node]["embedding"] = embeddings[j]
@@ -90,7 +90,7 @@ def process_paper(G, text, acronym, paper_data, paper_id, parent_id, data, level
             print(f"Could not find {cite}")
 
 
-def get_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, levels, MAX_EXAMPLES):
+def get_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, levels, MAX_EXAMPLES, embedding_mode):
     G = nx.Graph()
     data = {}
 
@@ -99,7 +99,7 @@ def get_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, le
     data[f"{paper_id}-text"] = text
 
     process_paper(G, text, acronym, paper_data, paper_id, f"{paper_id}-text", data, levels, MAX_EXAMPLES)
-    add_embeddings_to_graph(G, data, acronym, model, tokenizer, device)
+    add_embeddings_to_graph(G, data, acronym, model, tokenizer, device, embedding_mode)
 
     adj = nx.adjacency_matrix(G)
     S = aug_normalized_adjacency(adj)
