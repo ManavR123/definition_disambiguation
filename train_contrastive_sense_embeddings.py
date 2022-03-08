@@ -50,8 +50,8 @@ def train_embeddings(args):
 
                 embeddings = get_embeddings(model, tokenizer, sents, args.device, args.mode, is_train=True)
                 embeddings = F.normalize(embeddings, dim=1)
-                loss -= torch.sum(embeddings @ expansion_embeddings.T) - len(sents)
-                expansion_embeddings[expansions.index(expansion)] = F.normalize(embeddings.mean(dim=0))
+                loss -= torch.sum(embeddings @ embeddings.T) - len(sents)
+                expansion_embeddings[expansions.index(expansion)] = F.normalize(embeddings.mean(dim=0), dim=0)
 
             loss += torch.sum(expansion_embeddings @ expansion_embeddings.T - torch.eye(expansion_embeddings.shape[0]))
             loss.backward()
@@ -69,7 +69,7 @@ def train_embeddings(args):
     filename = time.strftime("%Y%m%d-%H%M%S")
     model.save_pretrained(f"models/embedding_model_{filename}")
     tokenizer.save_pretrained(f"models/embedding_model_{filename}")
-    wandb.save(f"models/embedding_model_{filename}")
+    wandb.save(f"models/embedding_model_{filename}/*")
 
 
 if __name__ == "__main__":
