@@ -39,7 +39,7 @@ def record_error(mode, logfile, gold_expansion, paper_id, text, graph_size, pred
         print(f"Prediction: {best}\nGold: {gold_expansion}", file=f)
         print(f"Scores: {preds}", file=f)
         print(f"Paper ID: {paper_id}", file=f)
-        if mode == "SGC":
+        if mode != "Baseline":
             print(f"Graph Size: {graph_size}", file=f)
 
 
@@ -131,7 +131,7 @@ def eval(filename, args, logfile):
                 gold_expansion,
                 paper_id,
                 text,
-                len(G) if args.graph_mode == "SGC" else None,
+                len(G) if args.graph_mode != "Baseline" else None,
                 preds,
                 best,
             )
