@@ -13,7 +13,7 @@ def mask_embeds(token_embeddings, mask):
 def get_word_idx(acronym, sents):
     word_idx = []
     for sent in sents:
-        tokens = word_tokenize(sent.lower().replace("-", " "))
+        tokens = word_tokenize(sent.replace("-", " "))
         idx = None
         for i, token in enumerate(tokens):
             if token.lower() == acronym.lower():
@@ -63,7 +63,3 @@ def get_embeddings(model, tokenizer, acronym, sents, device, mode, is_train=Fals
             result = model(**inputs)
 
     return pool_embeddings(mode, acronym, sents, inputs, result, device)
-
-
-def get_baseline_embedding(model, tokenizer, acronym, device, text, embedding_mode):
-    return get_embeddings(model, tokenizer, acronym, [text], device, embedding_mode)[0].cpu().numpy()

@@ -11,7 +11,7 @@ from transformers import AutoModel, AutoTokenizer
 
 from modeling.scoring_models import IdentityScoring, LinearScoring
 from modeling.sgc import get_sgc_embedding
-from modeling.utils_modeling import get_baseline_embedding
+from modeling.baseline import get_average_embedding, get_baseline_embedding
 from utils_args import create_parser
 
 
@@ -60,7 +60,11 @@ def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
 
 
 def eval(filename, args, logfile):
-    assert args.graph_mode in ["SGC", "Baseline"], f"Mode must be either SGC or Baseline\nGot: {args.graph_mode}"
+    assert args.graph_mode in [
+        "SGC",
+        "Average",
+        "Baseline",
+    ], f"Mode must be either SGC, Average or Baseline\nGot: {args.graph_mode}"
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
     with open("sciad_data/diction.json") as f:
         acronym_to_expansion = json.load(f)
@@ -87,19 +91,49 @@ def eval(filename, args, logfile):
         target = None
         if args.graph_mode == "SGC":
             target, G = get_sgc_embedding(
-                model, tokenizer, args.device, acronym, paper_data, text, args.k, args.levels, args.max_examples, args.embedding_mode
+                model,
+                tokenizer,
+                args.device,
+                acronym,
+                paper_data,
+                text,
+                args.k,
+                args.levels,
+                args.max_examples,
+                args.embedding_mode,
+            )
+        if args.graph_mode == "Average":
+            target, G = get_average_embedding(
+                model,
+                tokenizer,
+                args.device,
+                acronym,
+                paper_data,
+                text,
+                args.levels,
+                args.max_examples,
+                args.embedding_mode,
             )
         elif args.graph_mode == "Baseline":
             target = get_baseline_embedding(model, tokenizer, args.device, text, args.embedding_mode)
 
-        preds, best = get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device)
+        preds, best = get_prediction(
+            expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device
+        )
         prediction_by_acronym[acronym].append(best)
         gold_by_acronym[acronym].append(gold_expansion)
         if best == gold_expansion:
             correct += 1
         else:
             record_error(
-                args.graph_mode, logfile, gold_expansion, paper_id, text, len(G) if args.graph_mode == "SGC" else None, preds, best
+                args.graph_mode,
+                logfile,
+                gold_expansion,
+                paper_id,
+                text,
+                len(G) if args.graph_mode == "SGC" else None,
+                preds,
+                best,
             )
 
     record_results(logfile, correct / len(df), prediction_by_acronym, gold_by_acronym)
@@ -112,7 +146,11 @@ if __name__ == "__main__":
 
     logfile = f"logs/{time.strftime('%Y%m%d-%H%M%S')}.txt"
     with open(logfile, "w") as f:
-        mode_text = f"SGC with k = {args.k}, levels = {args.levels}" if args.graph_mode == "SGC" else "Baseline"
+        mode_text = (
+            f"{args.graph_mode} with k = {args.k}, levels = {args.levels}"
+            if args.graph_mode != "Baseline"
+            else "Baseline"
+        )
         print(f"Evaluating on {args.file}", file=f)
         print(f"Mode: {mode_text}", file=f)
         print(f"Expansion Embeddings: {args.expansion_embeddings_path}", file=f)
