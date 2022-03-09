@@ -43,7 +43,6 @@ def pool_embeddings(mode, acronym, sents, inputs, result, device):
         word_idx = get_word_idx(acronym, sents)
         mask = get_word_mask(inputs, device, word_idx)
         embeds = mask_embeds(result.last_hidden_state, mask)
-    embeds = F.normalize(embeds, p=2, dim=1)
     return embeds
 
 

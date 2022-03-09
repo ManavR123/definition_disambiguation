@@ -23,6 +23,5 @@ def get_average_embedding(model, tokenizer, device, acronym, paper_data, text, l
 
     X = np.array(list(nx.get_node_attributes(G, "embedding").values()))
     X = torch.FloatTensor(X).float()
-    X = F.normalize(X, p=2, dim=1)
     target = X.mean(0).detach().numpy()
     return target, G
