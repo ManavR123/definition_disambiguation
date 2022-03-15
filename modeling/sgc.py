@@ -55,18 +55,24 @@ def get_paper_text(paper_data):
     return text
 
 
-def add_examples(G, text, acronym, paper_id, paper_data, data, MAX_EXAMPLES):
-    count = 1
+def get_examples(text, acronym, paper_data, MAX_EXAMPLES):
+    examples = []
     for para in paper_data.get("pdf_parse", []):
         sents = sent_tokenize(para)
         for sent in sents:
             if acronym in sent and text not in sent:
-                G.add_node(f"{paper_id}-{count}")
-                data[f"{paper_id}-{count}"] = sent
-                G.add_edge(paper_id, f"{paper_id}-{count}")
-                count += 1
-                if count > MAX_EXAMPLES:
-                    return
+                examples.append(sent)
+                if len(examples) >= MAX_EXAMPLES:
+                    return examples
+    return examples
+
+
+def add_examples(G, text, acronym, paper_id, paper_data, data, MAX_EXAMPLES):
+    examples = get_examples(text, acronym, paper_data, MAX_EXAMPLES)
+    for count, sent in enumerate(examples):
+        G.add_node(f"{paper_id}-{count}")
+        data[f"{paper_id}-{count}"] = sent
+        G.add_edge(paper_id, f"{paper_id}-{count}")
 
 
 def process_paper(G, text, acronym, paper_data, paper_id, parent_id, data, levels, MAX_EXAMPLES):
@@ -82,7 +88,6 @@ def process_paper(G, text, acronym, paper_data, paper_id, parent_id, data, level
     for cite in paper_data["inbound_citations"] + paper_data["outbound_citations"]:
         if cite in G:
             continue
-
         try:
             cite_data = es.get(index="s2orc", id=cite)["_source"]
             process_paper(G, text, acronym, cite_data, cite, paper_id, data, levels - 1, MAX_EXAMPLES)
