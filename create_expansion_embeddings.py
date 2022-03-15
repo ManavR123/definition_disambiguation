@@ -4,6 +4,7 @@ import random
 
 import numpy as np
 from tqdm import tqdm
+import torch.nn.functional as F
 from transformers import AutoModel, AutoTokenizer
 
 from modeling.utils_modeling import get_embeddings
@@ -16,7 +17,6 @@ def create_embeddings(args):
     expansion_embeddings = {}
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     model = AutoModel.from_pretrained(args.model).to(args.device)
-
     with open("sciad_data/diction.json") as f:
         diction = json.load(f)
 
@@ -38,19 +38,21 @@ def create_embeddings(args):
         if args.replace_expansion:
             sents = [s.lower().replace(expansion.lower(), f" {acronym} ") for s in sents]
 
-        embeddings = get_embeddings(model, tokenizer, acronym, sents, args.device, args.mode).cpu().numpy()
+        embeddings = get_embeddings(model, tokenizer, acronym, sents, args.device, args.mode).cpu()
 
         if args.no_average:
             expansion_embeddings[expansion] = embeddings
         else:
             expansion_embeddings[expansion] = np.mean(embeddings, axis=0)
 
-    np.save(f"sciad_data/{args.output}.npy", expansion_embeddings)
+    output = {f"arg-{k}": v for k, v in vars(args).items()}
+    output["expansion_embeddings"] = expansion_embeddings
+    np.save(f"sciad_data/{args.output}.npy", output)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("Create embeddings for acronym expansions")
-    parser.add_argument("--output", type=str, default="expansion_embeddings")
+    parser.add_argument("--output", type=str)
     parser.add_argument("--device", type=str, default="cuda:1")
     parser.add_argument("--model", type=str, default="sentence-transformers/all-mpnet-base-v2")
     parser.add_argument("--mode", type=str, default="mean")

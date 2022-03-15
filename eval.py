@@ -8,6 +8,7 @@ import torch
 from sklearn.metrics import f1_score, precision_score, recall_score
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
+import wandb
 
 from modeling.scoring_models import IdentityScoring, LinearScoring
 from modeling.sgc import get_sgc_embedding
@@ -17,8 +18,8 @@ from utils_args import create_parser
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
     with torch.no_grad():
-        target = scoring_model(torch.Tensor(target / np.linalg.norm(target)).to(device))
-    target = target / torch.norm(target)
+        target = target / np.linalg.norm(target)
+        target = scoring_model(torch.Tensor(target).to(device))
 
     preds = {}
     for expansion in acronym_to_expansion[acronym]:
@@ -44,6 +45,7 @@ def record_error(mode, logfile, gold_expansion, paper_id, text, graph_size, pred
 
 
 def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
+    scores = {}
     with open(logfile, "a") as f:
         print("**********************************************************", file=f)
         print(f"Accuracy: {accuracy}", file=f)
@@ -57,6 +59,8 @@ def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
                 ]
             )
             print(f"{name}: {score}", file=f)
+            scores[name] = score
+    wandb.log(scores)
 
 
 def eval(filename, args, logfile):
@@ -65,7 +69,11 @@ def eval(filename, args, logfile):
         "Average",
         "Baseline",
     ], f"Mode must be either SGC, Average or Baseline\nGot: {args.graph_mode}"
+
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
+    wandb.config.update({f"expansion-embedding-{k}": v for k, v in expansion_embeddings.items() if "arg" in k})
+    expansion_embeddings = expansion_embeddings["expansion_embeddings"]
+
     with open("sciad_data/diction.json") as f:
         acronym_to_expansion = json.load(f)
     df = pd.read_csv(filename).dropna(subset=["paper_data"])
@@ -137,6 +145,8 @@ def eval(filename, args, logfile):
             )
 
     record_results(logfile, correct / len(df), prediction_by_acronym, gold_by_acronym)
+    wandb.save(logfile)
+    wandb.save(args.expansion_embeddings_path)
 
 
 if __name__ == "__main__":
@@ -158,5 +168,8 @@ if __name__ == "__main__":
         print(f"Model: {args.model}", file=f)
         print(f"Scoring Model: {args.scoring_model if args.scoring_model else 'Identity'}", file=f)
         print(f"Embedding Mode: {args.embedding_mode}", file=f)
+
+    wandb.init(project="acronym_disambiguation")
+    wandb.config.update(args)
 
     eval(args.file, args, logfile)
