@@ -13,23 +13,18 @@ from modeling.utils_modeling import get_embeddings
 def create_embeddings(args):
     # set seeds
     random.seed(args.seed)
-
-    expansion_embeddings = {}
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     model = AutoModel.from_pretrained(args.model).to(args.device)
-    with open("sciad_data/diction.json") as f:
-        diction = json.load(f)
+    diction = json.load(open("sciad_data/diction.json", "r"))
+    expansion_to_sents = json.load(open(args.expansions_to_sents, "r"))
 
     expansion_to_acronym = {}
     for acronym in diction:
         for expansion in diction[acronym]:
             expansion_to_acronym[expansion] = acronym
 
-    print("Loading examples sentences...")
-    expansion_to_sents = {}
-    with open(args.expansions_to_sents, "r") as f:
-        expansion_to_sents = json.load(f)
     print("Creating embeddings...")
+    expansion_embeddings = {}
     for expansion in tqdm(expansion_to_sents):
         acronym = expansion_to_acronym[expansion].lower()
         sents = [expansion.lower()] if args.expansion_only else expansion_to_sents[expansion]
@@ -39,6 +34,8 @@ def create_embeddings(args):
             sents = [s.lower().replace(expansion.lower(), f" {acronym} ") for s in sents]
 
         embeddings = get_embeddings(model, tokenizer, acronym, sents, args.device, args.mode).cpu()
+        if args.normalize:
+            embeddings = F.normalize(embeddings, dim=-1)
 
         if args.no_average:
             expansion_embeddings[expansion] = embeddings
@@ -61,6 +58,6 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--expansions_to_sents", type=str, default="sciad_data/expansions_to_sents.json")
     parser.add_argument("--replace_expansion", action="store_true")
+    parser.add_argument("--normalize", action="store_true")
     args = parser.parse_args()
-
     create_embeddings(args)
