@@ -10,25 +10,23 @@ from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 import wandb
 
-from modeling.scoring_models import IdentityScoring, LinearScoring
+from modeling.scoring_models import IdentityScoring, LinearScoring, MLPScoring
 from modeling.sgc import get_sgc_embedding
 from modeling.baseline import get_average_embedding, get_baseline_embedding
 from utils_args import create_parser
 
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
-    with torch.no_grad():
-        target = target / np.linalg.norm(target)
-        target = scoring_model(torch.Tensor(target).to(device))
-
+    target = target / torch.norm(target)
+    target = target.unsqueeze(0).to(device)
     preds = {}
     for expansion in acronym_to_expansion[acronym]:
-        embed = torch.Tensor(expansion_embeddings[expansion]).to(device)
-        score = embed @ target
+        embed = torch.Tensor(expansion_embeddings[expansion]).unsqueeze(0).to(device)
+        with torch.no_grad():
+            score = scoring_model(target, embed).squeeze()
         if len(score.shape) >= 1:
             score = torch.median(score)
         preds[expansion] = score.cpu().item()
-
     best = max(preds, key=preds.get)
     return preds, best
 
@@ -45,7 +43,7 @@ def record_error(mode, logfile, gold_expansion, paper_id, text, graph_size, pred
 
 
 def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
-    scores = {}
+    scores = {"accuracy": accuracy}
     with open(logfile, "a") as f:
         print("**********************************************************", file=f)
         print(f"Accuracy: {accuracy}", file=f)
@@ -53,7 +51,7 @@ def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
             score = np.mean(
                 [
                     score_func(
-                        gold_by_acronym[acronym], prediction_by_acronym[acronym], average="macro", zero_division=0
+                        gold_by_acronym[acronym], prediction_by_acronym[acronym], average="micro", zero_division=0
                     )
                     for acronym in prediction_by_acronym
                 ]
@@ -61,6 +59,38 @@ def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
             print(f"{name}: {score}", file=f)
             scores[name] = score
     wandb.log(scores)
+
+
+def get_target(args, model, tokenizer, acronym, paper_data, text):
+    if args.graph_mode == "SGC":
+        target, G = get_sgc_embedding(
+            model,
+            tokenizer,
+            args.device,
+            acronym,
+            paper_data,
+            text,
+            args.k,
+            args.levels,
+            args.max_examples,
+            args.embedding_mode,
+        )
+    if args.graph_mode == "Average":
+        target, G = get_average_embedding(
+            model,
+            tokenizer,
+            args.device,
+            acronym,
+            paper_data,
+            text,
+            args.levels,
+            args.max_examples,
+            args.embedding_mode,
+        )
+    elif args.graph_mode == "Baseline":
+        target = get_baseline_embedding(model, tokenizer, args.device, text, args.embedding_mode)
+        G = []
+    return target, G
 
 
 def eval(filename, args, logfile):
@@ -78,13 +108,18 @@ def eval(filename, args, logfile):
         acronym_to_expansion = json.load(f)
     df = pd.read_csv(filename).dropna(subset=["paper_data"])
 
-    model = AutoModel.from_pretrained(args.model).to(args.device)
+    model = AutoModel.from_pretrained(args.model).to(args.device).eval()
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    if args.scoring_model:
+
+    if args.scoring_model == "LinearScoring":
         scoring_model = LinearScoring(model.config.hidden_size, model.config.hidden_size).to(args.device)
-        scoring_model.load_state_dict(torch.load(args.scoring_model))
+        scoring_model.load_state_dict(torch.load(args.saved_scoring_model))
+    elif args.scoring_model == "MLPScoring":
+        scoring_model = MLPScoring(model.config.hidden_size * 2).to(args.device)
+        scoring_model.load_state_dict(torch.load(args.saved_scoring_model))
     else:
         scoring_model = IdentityScoring().to(args.device)
+    scoring_model.eval()
 
     correct = 0
     prediction_by_acronym = defaultdict(list)
@@ -96,35 +131,7 @@ def eval(filename, args, logfile):
         paper_id = paper_data["paper_id"]
         text = row["text"]
 
-        target = None
-        if args.graph_mode == "SGC":
-            target, G = get_sgc_embedding(
-                model,
-                tokenizer,
-                args.device,
-                acronym,
-                paper_data,
-                text,
-                args.k,
-                args.levels,
-                args.max_examples,
-                args.embedding_mode,
-            )
-        if args.graph_mode == "Average":
-            target, G = get_average_embedding(
-                model,
-                tokenizer,
-                args.device,
-                acronym,
-                paper_data,
-                text,
-                args.levels,
-                args.max_examples,
-                args.embedding_mode,
-            )
-        elif args.graph_mode == "Baseline":
-            target = get_baseline_embedding(model, tokenizer, args.device, text, args.embedding_mode)
-
+        target, G = get_target(args, model, tokenizer, acronym, paper_data, text)
         preds, best = get_prediction(
             expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device
         )
@@ -133,16 +140,7 @@ def eval(filename, args, logfile):
         if best == gold_expansion:
             correct += 1
         else:
-            record_error(
-                args.graph_mode,
-                logfile,
-                gold_expansion,
-                paper_id,
-                text,
-                len(G) if args.graph_mode != "Baseline" else None,
-                preds,
-                best,
-            )
+            record_error(args.graph_mode, logfile, gold_expansion, paper_id, text, len(G), preds, best)
 
     record_results(logfile, correct / len(df), prediction_by_acronym, gold_by_acronym)
     wandb.save(logfile)
@@ -151,7 +149,6 @@ def eval(filename, args, logfile):
 
 if __name__ == "__main__":
     parser = create_parser()
-    parser.add_argument("--scoring_model", default=None, type=str, help="Path to scoring model")
     args = parser.parse_args()
 
     logfile = f"logs/{time.strftime('%Y%m%d-%H%M%S')}.txt"
@@ -167,6 +164,8 @@ if __name__ == "__main__":
         print(f"Max Examples: {args.max_examples}", file=f)
         print(f"Model: {args.model}", file=f)
         print(f"Scoring Model: {args.scoring_model if args.scoring_model else 'Identity'}", file=f)
+        if args.saved_scoring_model:
+            print(f"Saved Scoring Model: {args.saved_scoring_model}", file=f)
         print(f"Embedding Mode: {args.embedding_mode}", file=f)
 
     wandb.init(project="acronym_disambiguation")

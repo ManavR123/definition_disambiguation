@@ -16,4 +16,6 @@ def create_parser():
         help="The expansion embeddings to use.",
         default="sciad_data/expansion_embeddings_normalized_specter_cls.npy",
     )
+    parser.add_argument("--scoring_model", default="Identity", type=str, help="Scoring Model to use")
+    parser.add_argument("--saved_scoring_model", default=None, type=str, help="Path to saved scoring model")
     return parser

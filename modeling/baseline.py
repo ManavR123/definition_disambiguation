@@ -1,7 +1,8 @@
 import numpy as np
+import torch
 from elasticsearch import Elasticsearch, NotFoundError
-from modeling.sgc import get_examples
 
+from modeling.sgc import get_examples
 from modeling.utils_modeling import get_embeddings
 
 
@@ -42,5 +43,5 @@ def get_average_embedding(model, tokenizer, device, acronym, paper_data, text, l
         X.extend(embeddings)
 
     X = np.array(X)
-    target = X.mean(0).detach().numpy()
+    target = torch.tensor(X.mean(0))
     return target, sents
