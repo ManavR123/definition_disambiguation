@@ -20,7 +20,7 @@ def train_embeddings(args):
     model = AutoModel.from_pretrained(args.model).to(args.device).train()
     optim = torch.optim.Adam(model.parameters(), lr=args.lr)
 
-    wandb.init(project="acronym_disambiguation")
+    wandb.init(project="acronym_disambiguation_contrastive_train")
     wandb.config.update(args)
 
     diction = json.load(open("sciad_data/diction.json"))
