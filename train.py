@@ -16,7 +16,7 @@ from utils_args import create_parser
 
 
 def setup_train(args):
-    wandb.init(project="acronym_disambiguation")
+    wandb.init(project="acronym_disambiguation_train")
     wandb.config.update(args)
 
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
@@ -38,7 +38,7 @@ def setup_train(args):
 
     if args.saved_scoring_model:
         scoring_model.load_state_dict(torch.load(args.saved_scoring_model))
-    optim = torch.optim.Adam(scoring_model.parameters(), lr=1e-2)
+    optim = torch.optim.Adam(scoring_model.parameters(), lr=args.lr)
     return expansion_embeddings, acronym_to_expansion, df, filename, model, tokenizer, scoring_model, optim
 
 
@@ -119,5 +119,6 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, help="The number of epochs to train for.", default=10)
     parser.add_argument("--batch_size", type=int, help="The batch size to use.", default=32)
     parser.add_argument("--log_every", type=int, help="The number of steps to log.", default=100)
+    parser.add_argument("--lr", type=float, help="The learning rate to use.", default=1e-3)
     args = parser.parse_args()
     train(args)
