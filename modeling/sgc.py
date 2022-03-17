@@ -114,5 +114,5 @@ def get_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, le
     X = torch.FloatTensor(X).float()
     X = F.normalize(X, p=2, dim=1)
     Y = pool_features(X, S, k)
-    target = Y[0].detach().numpy()
+    target = Y[0].detach()
     return target, G
