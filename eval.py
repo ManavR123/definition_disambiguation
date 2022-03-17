@@ -28,6 +28,8 @@ def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym
             score = torch.median(score)
         preds[expansion] = score.cpu().item()
     best = max(preds, key=preds.get)
+    # sort by score
+    preds = dict(sorted(preds.items(), key=lambda item: item[1], reverse=True))
     return preds, best
 
 
@@ -168,7 +170,7 @@ if __name__ == "__main__":
             print(f"Saved Scoring Model: {args.saved_scoring_model}", file=f)
         print(f"Embedding Mode: {args.embedding_mode}", file=f)
 
-    wandb.init(project="acronym_disambiguation")
+    wandb.init(project="acronym_disambiguation_eval")
     wandb.config.update(args)
 
     eval(args.file, args, logfile)
