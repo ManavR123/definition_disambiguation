@@ -26,7 +26,7 @@ def setup_train(args):
         acronym_to_expansion = json.load(f)
     df = pd.read_csv(args.file).dropna(subset=["paper_data"])
 
-    filename = f"models/{args.scoring_model}_{time.strftime('%Y%m%d-%H%M%S')}.pt"
+    filename = f"models/{args.scoring_model}_{wandb.run.name}.pt"
 
     model = AutoModel.from_pretrained(args.model).to(args.device)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
