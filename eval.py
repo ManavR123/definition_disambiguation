@@ -11,6 +11,7 @@ from transformers import AutoModel, AutoTokenizer
 import wandb
 
 from modeling.scoring_models import IdentityScoring, LinearScoring, MLPScoring
+from modeling.sent_only_sgc import get_sent_sgc_embedding
 from modeling.sgc import get_sgc_embedding
 from modeling.baseline import get_average_embedding, get_baseline_embedding, get_paper_average_embedding
 from utils_args import create_parser
@@ -77,6 +78,19 @@ def get_target(args, model, tokenizer, acronym, paper_data, text):
             args.max_examples,
             args.embedding_mode,
         )
+    if args.graph_mode == "SentSGC":
+        target, G = get_sent_sgc_embedding(
+            model,
+            tokenizer,
+            args.device,
+            acronym,
+            paper_data,
+            text,
+            args.k,
+            args.levels,
+            args.max_examples,
+            args.embedding_mode,
+        )
     if args.graph_mode == "Average":
         target, G = get_average_embedding(
             model,
@@ -110,10 +124,11 @@ def get_target(args, model, tokenizer, acronym, paper_data, text):
 def eval(filename, args, logfile):
     assert args.graph_mode in [
         "SGC",
+        "SentSGC",
         "Average",
         "PaperAverage",
         "Baseline",
-    ], f"Mode must be either SGC, Average, PaperAverage or Baseline\nGot: {args.graph_mode}"
+    ], f"Mode must be either SGC, SentSGC, Average, PaperAverage or Baseline\nGot: {args.graph_mode}"
 
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
     wandb.config.update({f"expansion-embedding-{k}": v for k, v in expansion_embeddings.items() if "arg" in k})

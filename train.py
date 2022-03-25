@@ -11,6 +11,7 @@ import wandb
 
 from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import LinearScoring, MLPScoring
+from modeling.sent_only_sgc import get_sent_sgc_embedding
 from modeling.sgc import get_sgc_embedding
 from utils_args import create_parser
 
@@ -58,6 +59,19 @@ def get_target(args, model, tokenizer, acronym, text, paper_data):
             args.max_examples,
             args.embedding_mode,
         )
+    if args.graph_mode == "SentSGC":
+        target, _ = get_sent_sgc_embedding(
+            model,
+            tokenizer,
+            args.device,
+            acronym,
+            paper_data,
+            text,
+            args.k,
+            args.levels,
+            args.max_examples,
+            args.embedding_mode,
+        )
     if args.graph_mode == "Average":
         target, _ = get_average_embedding(
             model,
@@ -82,7 +96,6 @@ def get_target(args, model, tokenizer, acronym, text, paper_data):
             args.max_examples,
             args.embedding_mode,
         )
-
     return target
 
 
