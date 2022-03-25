@@ -9,7 +9,7 @@ from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 import wandb
 
-from modeling.baseline import get_average_embedding
+from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import LinearScoring, MLPScoring
 from modeling.sgc import get_sgc_embedding
 from utils_args import create_parser
@@ -33,8 +33,10 @@ def setup_train(args):
 
     if args.scoring_model == "LinearScoring":
         scoring_model = LinearScoring(model.config.hidden_size, model.config.hidden_size).to(args.device).train()
-    elif args.scoring_model == "MLPScoring":
+    elif args.scoring_model == "MLPScoring" and args.graph_mode != "PaperAverage":
         scoring_model = MLPScoring(model.config.hidden_size * 2).to(args.device).train()
+    elif args.scoring_model == "MLPScoring" and args.graph_mode == "PaperAverage":
+        scoring_model = MLPScoring(model.config.hidden_size * 3).to(args.device).train()
 
     if args.saved_scoring_model:
         scoring_model.load_state_dict(torch.load(args.saved_scoring_model))
@@ -58,6 +60,18 @@ def get_target(args, model, tokenizer, acronym, text, paper_data):
         )
     if args.graph_mode == "Average":
         target, _ = get_average_embedding(
+            model,
+            tokenizer,
+            args.device,
+            acronym,
+            paper_data,
+            text,
+            args.levels,
+            args.max_examples,
+            args.embedding_mode,
+        )
+    if args.graph_mode == "PaperAverage":
+        target, _ = get_paper_average_embedding(
             model,
             tokenizer,
             args.device,

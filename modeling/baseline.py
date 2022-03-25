@@ -2,8 +2,10 @@ import numpy as np
 import torch
 from elasticsearch import Elasticsearch, NotFoundError
 
-from modeling.sgc import get_examples
-from modeling.utils_modeling import get_embeddings
+from modeling.sgc import get_examples, get_paper_text
+from modeling.utils_modeling import embed_sents, get_embeddings
+
+es = Elasticsearch(hosts=["http://localhost:9200"], timeout=60, retry_on_timeout=True)
 
 
 def get_baseline_embedding(model, tokenizer, acronym, device, text, embedding_mode):
@@ -11,7 +13,6 @@ def get_baseline_embedding(model, tokenizer, acronym, device, text, embedding_mo
 
 
 def process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels, MAX_EXAMPLES):
-    es = Elasticsearch(hosts=["http://localhost:9200"], timeout=60, retry_on_timeout=True)
     sents.extend(get_examples(text, acronym, paper_data, MAX_EXAMPLES))
     seen_papers.add(paper_id)
 
@@ -29,19 +30,34 @@ def process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, level
 
 
 def get_average_embedding(model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode):
+    sents, x, _ = average_embedding_helper(
+        model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode
+    )
+    return x, sents
+
+
+def get_paper_average_embedding(
+    model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode
+):
+    sents, x, z = average_embedding_helper(
+        model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode
+    )
+    target = torch.cat((x / torch.norm(x), z / torch.norm(z)))
+    return target, sents
+
+
+def average_embedding_helper(model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode):
     sents = [text]
     seen_papers = set()
 
     paper_id = paper_data["paper_id"]
     process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels, MAX_EXAMPLES)
 
-    X = []
-    BATCH_SIZE = 32
-    for i in range(0, len(sents), BATCH_SIZE):
-        batch = sents[i : i + BATCH_SIZE]
-        embeddings = get_embeddings(model, tokenizer, acronym, batch, device, embedding_mode).cpu().numpy()
-        X.extend(embeddings)
+    X = embed_sents(model, tokenizer, device, acronym, embedding_mode, sents)
 
-    X = np.array(X)
-    target = torch.tensor(X.mean(0))
-    return target, sents
+    paper_texts = [get_paper_text(es.get(index="s2orc", id=id)["_source"]) for id in seen_papers]
+    sents += paper_texts
+    Z = get_embeddings(model, tokenizer, acronym, paper_texts, device, embedding_mode).cpu().numpy()
+
+    x, z = torch.tensor(X.mean(0)), torch.tensor(Z.mean(0))
+    return sents, x, z

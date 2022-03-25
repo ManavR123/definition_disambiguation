@@ -62,3 +62,14 @@ def get_embeddings(model, tokenizer, acronym, sents, device, mode, is_train=Fals
             result = model(**inputs)
 
     return pool_embeddings(mode, acronym, sents, inputs, result, device)
+
+
+def embed_sents(model, tokenizer, device, acronym, embedding_mode, sents):
+    X = []
+    BATCH_SIZE = 32
+    for i in range(0, len(sents), BATCH_SIZE):
+        batch = sents[i : i + BATCH_SIZE]
+        embeddings = get_embeddings(model, tokenizer, acronym, batch, device, embedding_mode).cpu().numpy()
+        X.extend(embeddings)
+    X = np.array(X)
+    return X
