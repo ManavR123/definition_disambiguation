@@ -163,6 +163,7 @@ def eval(filename, args, logfile):
     record_results(logfile, correct / len(df), prediction_by_acronym, gold_by_acronym)
     wandb.save(logfile)
     wandb.save(args.expansion_embeddings_path)
+    wandb.save(args.saved_scoring_model)
 
 
 if __name__ == "__main__":

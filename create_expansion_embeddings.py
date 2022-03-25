@@ -1,6 +1,7 @@
 import argparse
 import json
 import random
+from time import time
 
 import numpy as np
 from tqdm import tqdm
@@ -44,7 +45,9 @@ def create_embeddings(args):
 
     output = {f"arg-{k}": v for k, v in vars(args).items()}
     output["expansion_embeddings"] = expansion_embeddings
-    np.save(f"sciad_data/{args.output}.npy", output)
+    output["expansion_to_sents"] = expansion_to_sents
+    filename = time.strftime("%Y-%m-%d_%H-%M-%S")
+    np.save(f"sciad_data/{filename}.npy", output)
 
 
 if __name__ == "__main__":
