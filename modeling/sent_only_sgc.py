@@ -52,13 +52,6 @@ def create_graph(acronym, paper_data, text, levels, MAX_EXAMPLES):
 
 def get_sent_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, levels, MAX_EXAMPLES, embedding_mode):
     G = create_graph(acronym, paper_data, text, levels, MAX_EXAMPLES)
-
-    # save image of graph
-    nx.draw(G, with_labels=True, font_weight='bold')
-    plt.margins(x=0.4)
-    plt.savefig(f"debug/{paper_data['paper_id']}.png")
-    plt.close()
-
     ids, sents = zip(*nx.get_node_attributes(G, "text").items())
     X = embed_sents(model, tokenizer, device, acronym, embedding_mode, list(sents))
 
