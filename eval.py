@@ -1,11 +1,9 @@
 import json
 import time
-from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.metrics import f1_score, precision_score, recall_score
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 import wandb
@@ -15,6 +13,7 @@ from modeling.sent_only_sgc import get_sent_sgc_embedding
 from modeling.sgc import get_sgc_embedding
 from modeling.baseline import get_average_embedding, get_baseline_embedding, get_paper_average_embedding
 from utils_args import create_parser
+from scorer import score_expansion
 
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
@@ -44,20 +43,12 @@ def record_error(mode, logfile, gold_expansion, paper_id, text, graph_size, pred
             print(f"Graph Size: {graph_size}", file=f)
 
 
-def record_results(logfile, accuracy, prediction_by_acronym, gold_by_acronym):
-    scores = {"accuracy": accuracy}
+def record_results(logfile, predictions, golds):
+    scores = {}
     with open(logfile, "a") as f:
         print("**********************************************************", file=f)
-        print(f"Accuracy: {accuracy}", file=f)
-        for name, score_func in [("F1", f1_score), ("Precision", precision_score), ("Recall", recall_score)]:
-            score = np.mean(
-                [
-                    score_func(
-                        gold_by_acronym[acronym], prediction_by_acronym[acronym], average="micro", zero_division=0
-                    )
-                    for acronym in prediction_by_acronym
-                ]
-            )
+        acc, prec, rec, f1 = score_expansion(golds, predictions)
+        for name, score in [("accuracy", acc), ("F1", f1), ("Precision", prec), ("Recall", rec)]:
             print(f"{name}: {score}", file=f)
             scores[name] = score
     wandb.log(scores)
@@ -153,9 +144,7 @@ def eval(filename, args, logfile):
         scoring_model = IdentityScoring().to(args.device)
     scoring_model.eval()
 
-    correct = 0
-    prediction_by_acronym = defaultdict(list)
-    gold_by_acronym = defaultdict(list)
+    predictions, golds = [], []
     for _, row in tqdm(df.iterrows(), total=len(df)):
         acronym = row["acronym"]
         gold_expansion = row["expansion"]
@@ -164,17 +153,15 @@ def eval(filename, args, logfile):
         text = row["text"]
 
         target, G = get_target(args, model, tokenizer, acronym, paper_data, text)
-        preds, best = get_prediction(
+        pred_scores, best = get_prediction(
             expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device
         )
-        prediction_by_acronym[acronym].append(best)
-        gold_by_acronym[acronym].append(gold_expansion)
-        if best == gold_expansion:
-            correct += 1
-        else:
-            record_error(args.graph_mode, logfile, gold_expansion, paper_id, text, len(G), preds, best)
+        predictions.append(best)
+        golds.append(gold_expansion)
+        if best != gold_expansion:
+            record_error(args.graph_mode, logfile, gold_expansion, paper_id, text, len(G), pred_scores, best)
 
-    record_results(logfile, correct / len(df), prediction_by_acronym, gold_by_acronym)
+    record_results(logfile, predictions, golds)
     wandb.save(logfile)
     wandb.save(args.expansion_embeddings_path)
     wandb.save(args.saved_scoring_model)
