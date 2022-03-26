@@ -18,7 +18,6 @@ from utils_args import create_parser
 
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
-    target = target / torch.norm(target)
     target = target.unsqueeze(0).to(device)
     preds = {}
     for expansion in acronym_to_expansion[acronym]:

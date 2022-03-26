@@ -42,7 +42,7 @@ def get_paper_average_embedding(
     sents, x, z = average_embedding_helper(
         model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode
     )
-    target = torch.cat((x / torch.norm(x), z / torch.norm(z)))
+    target = torch.cat((x, z))
     return target, sents
 
 
@@ -60,4 +60,5 @@ def average_embedding_helper(model, tokenizer, device, acronym, paper_data, text
     Z = embed_sents(model, tokenizer, device, acronym, embedding_mode, paper_texts)
 
     x, z = torch.tensor(X.mean(0)), torch.tensor(Z.mean(0))
+    x, z = x / torch.norm(x), z / torch.norm(z)
     return sents, x, z

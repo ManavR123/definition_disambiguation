@@ -100,7 +100,6 @@ def get_target(args, model, tokenizer, acronym, text, paper_data):
 
 
 def get_loss(expansion_embeddings, scoring_model, acronym, target, gold_expansion, acronym_to_expansion, device):
-    target = target / torch.norm(target)
     target = target.unsqueeze(0).to(device)
     loss = torch.tensor(0.0).to(device)
     for expansion in acronym_to_expansion[acronym]:
