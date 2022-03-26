@@ -95,6 +95,18 @@ def process_paper(G, text, acronym, paper_data, paper_id, parent_id, data, level
             print(f"Could not find {cite}")
 
 
+def sgc(k, G, X):
+    adj = nx.adjacency_matrix(G)
+    S = aug_normalized_adjacency(adj)
+    S = sparse_mx_to_torch_sparse_tensor(S)
+    X = torch.FloatTensor(X).float()
+    X = F.normalize(X, p=2, dim=1)
+    Y = pool_features(X, S, k)
+    target = Y[0].detach()
+    target = target / torch.norm(target)
+    return target
+
+
 def get_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, levels, MAX_EXAMPLES, embedding_mode):
     G = nx.Graph()
     data = {}
@@ -105,14 +117,7 @@ def get_sgc_embedding(model, tokenizer, device, acronym, paper_data, text, k, le
 
     process_paper(G, text, acronym, paper_data, paper_id, f"{paper_id}-text", data, levels, MAX_EXAMPLES)
     add_embeddings_to_graph(G, data, acronym, model, tokenizer, device, embedding_mode)
-
-    adj = nx.adjacency_matrix(G)
-    S = aug_normalized_adjacency(adj)
-    S = sparse_mx_to_torch_sparse_tensor(S)
-
     X = np.array(list(nx.get_node_attributes(G, "embedding").values()))
-    X = torch.FloatTensor(X).float()
-    X = F.normalize(X, p=2, dim=1)
-    Y = pool_features(X, S, k)
-    target = Y[0].detach()
+
+    target = sgc(k, G, X)
     return target, G
