@@ -13,8 +13,9 @@ from modeling.utils_modeling import get_embeddings
 
 
 def create_embeddings(args):
-    # set seeds
     random.seed(args.seed)
+    repo = git.Repo(search_parent_directories=True)
+    sha = repo.head.object.hexsha
     tokenizer = AutoTokenizer.from_pretrained(args.model)
     model = AutoModel.from_pretrained(args.model).to(args.device)
     diction = json.load(open("sciad_data/diction.json", "r"))
@@ -46,9 +47,6 @@ def create_embeddings(args):
     output = {f"arg-{k}": v for k, v in vars(args).items()}
     output["expansion_embeddings"] = expansion_embeddings
     output["expansion_to_sents"] = expansion_to_sents
-
-    repo = git.Repo(search_parent_directories=True)
-    sha = repo.head.object.hexsha
     output["git_commit"] = sha
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
