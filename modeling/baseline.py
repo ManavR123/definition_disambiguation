@@ -62,7 +62,7 @@ def average_embedding_helper(model, tokenizer, device, acronym, paper_data, text
     paper_texts = [get_paper_text(es.get(index="s2orc", id=id)["_source"]) for id in seen_papers]
     sents += paper_texts
 
-    Z = embed_sents(paper_model, paper_tokenizer, device, acronym, embedding_mode, paper_texts)
+    Z = embed_sents(paper_model, paper_tokenizer, device, acronym, "CLS", paper_texts)
 
     x, z = torch.tensor(X.mean(0)), torch.tensor(Z.mean(0))
     x, z = x / torch.norm(x), z / torch.norm(z)
