@@ -126,6 +126,7 @@ def train(args):
             )
             optim.zero_grad()
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 2)
             batch_loss += loss.item()
 
             if step % args.batch_size == 0:
