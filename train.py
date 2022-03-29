@@ -113,7 +113,7 @@ def get_loss(expansion_embeddings, scoring_model, acronym, target, gold_expansio
 
 def train(args):
     expansion_embeddings, acronym_to_expansion, df, filename, model, tokenizer, scoring_model, optim = setup_train(args)
-    wandb.watch(scoring_model)
+    wandb.watch(scoring_model, log="all", log_freq=args.log_every)
     step, batch_loss = 1, 0.0
     for _ in range(args.num_epochs):
         for _, row in tqdm(df.iterrows(), total=len(df)):
