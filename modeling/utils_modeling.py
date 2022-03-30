@@ -13,7 +13,6 @@ def mask_embeds(token_embeddings, mask):
 def get_word_idx(acronym, inputs, sents):
     word_idx = []
     for i in range(len(sents)):
-        import pdb; pdb.set_trace()
         max_id = max(inputs.word_ids(i), key=lambda x: x or -1)
         for id in range(max_id + 1):
             start, end = inputs.word_to_chars(i, id)
