@@ -10,16 +10,15 @@ def mask_embeds(token_embeddings, mask):
     return embeds
 
 
-def get_word_idx(acronym, sents):
+def get_word_idx(acronym, inputs, sents):
     word_idx = []
-    for sent in sents:
-        tokens = word_tokenize(sent.replace("-", " "))
-        idx = None
-        for i, token in enumerate(tokens):
-            if token.lower() == acronym.lower():
-                idx = i
+    for i in range(len(sents)):
+        max_id = max(inputs.word_ids(i)[1:-1])
+        for id in range(max_id + 1):
+            start, end = inputs.word_to_chars(i, id)
+            if sents[i][start:end] == acronym:
+                word_idx.append(id)
                 break
-        word_idx.append(idx)
     return word_idx
 
 
@@ -40,7 +39,7 @@ def pool_embeddings(mode, acronym, sents, inputs, result, device):
         mask = inputs["attention_mask"]
         embeds = mask_embeds(result.last_hidden_state, mask)
     elif mode == "acronym":
-        word_idx = get_word_idx(acronym, sents)
+        word_idx = get_word_idx(acronym, inputs, sents)
         mask = get_word_mask(inputs, device, word_idx)
         embeds = mask_embeds(result.last_hidden_state, mask)
     return embeds
