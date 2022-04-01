@@ -60,10 +60,10 @@ def get_examples(text, acronym, paper_data, MAX_EXAMPLES):
     for para in paper_data.get("pdf_parse", []):
         sents = sent_tokenize(para)
         for sent in sents:
+            if len(examples) >= MAX_EXAMPLES:
+                return examples
             if acronym in sent and text not in sent:
                 examples.append(sent)
-                if len(examples) >= MAX_EXAMPLES:
-                    return examples
     return examples
 
 
