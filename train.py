@@ -17,7 +17,7 @@ from utils_args import create_parser
 
 
 def setup_train(args):
-    wandb.init(project="acronym_disambiguation_train")
+    wandb.init(project=f"{args.project}_train")
     wandb.config.update(args)
 
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]

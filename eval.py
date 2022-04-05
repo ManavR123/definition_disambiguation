@@ -188,7 +188,7 @@ if __name__ == "__main__":
             print(f"Saved Scoring Model: {args.saved_scoring_model}", file=f)
         print(f"Embedding Mode: {args.embedding_mode}", file=f)
 
-    wandb.init(project="acronym_disambiguation_eval")
+    wandb.init(project=f"{args.project}_eval")
     wandb.config.update(args)
 
     eval(args.file, args, logfile)
