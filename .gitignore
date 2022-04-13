@@ -123,3 +123,5 @@ elasticsearch*
 *.txt
 *.jsonl
 *.pickle
+*.png
+*.tsv
