@@ -1,10 +1,11 @@
 from string import punctuation
 
 
-def filter(option, term):
+def valid_sense(option, term):
     option, term = option.lower(), term.lower()
     return (
-        "," not in option
+        option.isascii()
+        and "," not in option
         and "film" not in option
         and "band" not in option
         and "album" not in option
@@ -41,5 +42,5 @@ def filter(option, term):
     )
 
 
-def invalid_term(inputString):
-    return any(char.isdigit() for char in inputString) or any(p in inputString for p in punctuation)
+def invalid_term(term):
+    return any(char.isdigit() for char in term) or any(p in term for p in punctuation) or not term.isascii()
