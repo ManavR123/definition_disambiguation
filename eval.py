@@ -106,7 +106,7 @@ def get_target(args, model, tokenizer, acronym, paper_data, text):
             args.embedding_mode,
         )
     elif args.graph_mode == "Baseline":
-        target = get_baseline_embedding(model, tokenizer, args.device, text, args.embedding_mode)
+        target = get_baseline_embedding(model, tokenizer, acronym, args.device, text, args.embedding_mode)
         G = []
     return target, G
 
