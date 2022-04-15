@@ -27,24 +27,30 @@ with open("wikipedia_parsing/ambiguous_terms_log.txt", "w") as f:
                 wikipedia.page(term, redirect=False, auto_suggest=False)
                 wikipedia.page(f"{term} (disambiguation)", redirect=False, auto_suggest=False)
             except wikipedia.exceptions.DisambiguationError as e:
-                options = set([op.lower() for op in e.options if valid_sense(op, term.split()[0])])
+                options = set([op.lower() for op in e.options if valid_sense(op, term)])
+                if "(disambiguation)" in e.title:
+                    options.add(term)
+
                 for t in options:
                     try:
                         summary = wikipedia.summary(t, redirect=False, auto_suggest=False)
                         rows.append([t, " ".join(summary.replace("\n", " ").split())])
                         term_to_sense[term].append(t)
                         print(f"{len(term_to_sense)}: {term} -> {t}", file=f)
-                    except (
-                        wikipedia.exceptions.RedirectError,
-                        wikipedia.exceptions.PageError,
-                        wikipedia.exceptions.DisambiguationError,
-                    ) as e:
+                    except wikipedia.exceptions.WikipediaException:
+                        continue
+                    except Exception as e:
+                        print(e)
                         continue
             except (wikipedia.exceptions.PageError, wikipedia.exceptions.RedirectError):
                 continue
+            except Exception as e:
+                print(e)
+                continue
 
-            if len(term_to_sense[term]) < 2:
+            if len(term_to_sense[term]) == 1:
                 del term_to_sense[term]
+                rows.pop()
             else:
                 count += 1
 
