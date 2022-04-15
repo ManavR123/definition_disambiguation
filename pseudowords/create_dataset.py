@@ -38,7 +38,6 @@ def main(args):
             term_examples = []
             for paper in res:
                 examples = get_examples(paper, term)
-                examples = random.choices(examples, k=min(len(examples), 3))
                 for example in examples:
                     term_examples.append(
                         {
@@ -50,7 +49,12 @@ def main(args):
                     )
 
             assert len(term_examples) > 0, f"No examples found for {term}"
-            k = min(int(SENSE_DISTRIBUTIONS[len(diction[pseudoword])][i] * args.num_examples), len(term_examples))
+            k = round(SENSE_DISTRIBUTIONS[len(diction[pseudoword])][i] * args.num_examples)
+            
+            if k > len(term_examples):
+                print(f"{pseudoword} {term} only has {len(term_examples)} examples, expected at least {k}")
+                k = len(term_examples)
+
             rows.extend(random.choices(term_examples, k=k))
 
     print(f"Found {len(rows)} examples")

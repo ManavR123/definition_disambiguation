@@ -4,8 +4,6 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 from tqdm import tqdm
 
-ADJUSTMENT = 2.23
-
 
 def get_embed_matrix(term_embeds):
     idx_to_term = {}
@@ -17,9 +15,9 @@ def get_embed_matrix(term_embeds):
     return idx_to_term, embeds
 
 
-def get_sorted_neighbors(embeds):
+def get_sorted_neighbors(embeds, adjustment):
     distances = pairwise_distances(embeds, metric="euclidean")
-    adjusted_distances = np.abs(distances - ADJUSTMENT * (np.ones(distances.shape) - np.eye(distances.shape[0])))
+    adjusted_distances = np.abs(distances - adjustment * (np.ones(distances.shape) - np.eye(distances.shape[0])))
     sorted_idx = np.argsort(adjusted_distances)
     return sorted_idx
 
@@ -38,9 +36,9 @@ def get_partition(max_size):
     return sizes
 
 
-def get_knn_pseudowords(term_embeds):
+def get_knn_pseudowords(term_embeds, adjustment):
     idx_to_term, embeds = get_embed_matrix(term_embeds)
-    sorted_neighbors = get_sorted_neighbors(embeds)
+    sorted_neighbors = get_sorted_neighbors(embeds, adjustment)
     partition = get_partition(len(embeds))
 
     i, count, selected_terms = 0, 0, set()
@@ -73,15 +71,16 @@ def main(args):
     term_embeds = np.load("pseudowords/terms_embed.npy", allow_pickle=True)[()]["expansion_embeddings"]
 
     if args.mode == "kNN":
-        expansions = get_knn_pseudowords(term_embeds)
+        expansions = get_knn_pseudowords(term_embeds, args.adjustment)
 
     # save expansions to json
-    with open(f"pseudowords/pseudoword_{args.mode}_expansions.json", "w") as f:
+    with open(f"pseudowords/pseudoword_{args.mode}_{args.adjustment}_expansions.json", "w") as f:
         json.dump(expansions, f)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", type=str, default="kNN")
+    parser.add_argument("--adjustment", type=float, default=2.23)
     args = parser.parse_args()
     main(args)
