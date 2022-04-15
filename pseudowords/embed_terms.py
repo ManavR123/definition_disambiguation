@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 import torch
+from torch.nn import functional as F
 from tqdm import tqdm
 import numpy as np
 from transformers import AutoTokenizer, AutoModel
@@ -24,6 +25,7 @@ def main(args):
         mask = inputs["attention_mask"]
         mask = mask.unsqueeze(-1).expand(result.size()).float()
         embed = torch.sum(result * mask, 1) / torch.clamp(mask.sum(1), min=1e-9)
+        embed = F.normalize(embed, dim=-1)
         embeds.extend(embed.cpu().numpy())
 
     term_embeddings = {}
@@ -38,6 +40,6 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--terms", type=str, default="pseudowords/terms.tsv")
+    parser.add_argument("--terms", type=str, default="wikipedia_parsing/terms.tsv")
     args = parser.parse_args()
     main(args)

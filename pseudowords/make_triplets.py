@@ -16,6 +16,7 @@ def get_embed_matrix(term_embeds):
 
 
 def get_sorted_neighbors(embeds, adjustment):
+    embeds = embeds / np.linalg.norm(embeds, axis=1, keepdims=True)
     distances = pairwise_distances(embeds, metric="euclidean")
     adjusted_distances = np.abs(distances - adjustment * (np.ones(distances.shape) - np.eye(distances.shape[0])))
     sorted_idx = np.argsort(adjusted_distances)

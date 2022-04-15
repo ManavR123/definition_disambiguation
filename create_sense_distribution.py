@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
+from torch.nn import functional as F
 from sklearn.metrics import pairwise_distances
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -22,14 +23,18 @@ def main(args):
     expansions = json.load(open(args.expansions, "r"))
     df = pd.read_csv(args.summaries, sep="\t")
     mins, maxes, means, meds, all_dists = [], [], [], [], []
-    for senses in tqdm(expansions.values()):
+    for term, senses in tqdm(expansions.items()):
         summaries = [df.loc[df.term == sense, "summary"].values[0] for sense in senses]
+        if len(summaries) == 0:
+            print(f"No summaries for {term}")
+            continue
         inputs = tokenizer(summaries, return_tensors="pt", truncation=True, padding=True).to("cuda:1")
         with torch.no_grad():
             result = model(**inputs).last_hidden_state
             mask = inputs["attention_mask"]
             mask = mask.unsqueeze(-1).expand(result.size()).float()
             embeddings = torch.sum(result * mask, 1) / torch.clamp(mask.sum(1), min=1e-9)
+            embeddings = F.normalize(embeddings, dim=-1)
 
         distances = pairwise_distances(embeddings.cpu().numpy(), metric="euclidean")
 
@@ -44,13 +49,12 @@ def main(args):
     plt.title(f"{args.title} (n={len(expansions)})")
     plt.ylabel("Euclidean distance")
     plt.boxplot(data, labels=["Min", "Max", "Mean", "Median", "All"], showfliers=False)
-    plt.axis([None, None, 0, 4])
+    plt.axis([None, None, 0, 1.5])
     plt.savefig(args.output)
-    print("Median Minimum Distance:", np.median(mins))
-    print("Median Maximum Distance:", np.median(maxes))
-    print("Median Mean Distance:", np.median(means))
-    print("Median Median Distance:", np.median(meds))
-    print("Median All Distance:", np.median(all_dists))
+    for name, d in zip(["mins", "maxes", "means", "meds", "all_dists"], data):
+        for func in [np.min, np.max, np.median]:
+            print(f"{name} {func.__name__}", func(d))
+        print("-" * 80)
 
 
 if __name__ == "__main__":
