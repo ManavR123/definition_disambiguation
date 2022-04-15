@@ -20,12 +20,19 @@ SENSE_DISTRIBUTIONS = {
 
 
 def get_examples(paper_data, term):
+    text = []
+    if type(paper_data["abstract"]) == list:
+        text.extend(paper_data["abstract"])
+    elif type(paper_data["abstract"]) == str:
+        text.append(paper_data["abstract"])
+    text.extend(paper_data.get("pdf_parse", []))
+
     examples = []
-    for para in paper_data.get("pdf_parse", []):
+    for para in text:
         sents = sent_tokenize(para)
         for sent in sents:
-            if f"{term}".lower() in f" {sent} ".lower():
-                examples.append(sent.lower())
+            if term.lower() in sent.lower():
+                examples.append(sent)
     return examples
 
 
@@ -34,7 +41,7 @@ def main(args):
     rows = []
     for pseudoword in tqdm(diction):
         for i, term in enumerate(diction[pseudoword]):
-            res = search(term, fields=["pdf_parse"], limit=30)
+            res = search(term, fields=["abstract", "pdf_parse"], limit=args.num_examples)
             term_examples = []
             for paper in res:
                 examples = get_examples(paper, term)
@@ -50,7 +57,7 @@ def main(args):
 
             assert len(term_examples) > 0, f"No examples found for {term}"
             k = round(SENSE_DISTRIBUTIONS[len(diction[pseudoword])][i] * args.num_examples)
-            
+
             if k > len(term_examples):
                 print(f"{pseudoword} {term} only has {len(term_examples)} examples, expected at least {k}")
                 k = len(term_examples)

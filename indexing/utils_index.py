@@ -103,6 +103,7 @@ def search(text_query, fields=None, limit=1):
             "query": f'"{text_query}"',
             "fields": fields,
             "type": "phrase",
+            "operator": "or",
         }
     }
 
