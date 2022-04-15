@@ -12,7 +12,7 @@ paper_tokenizer = AutoTokenizer.from_pretrained("allenai/specter")
 
 
 def get_baseline_embedding(model, tokenizer, acronym, device, text, embedding_mode):
-    return get_embeddings(model, tokenizer, acronym, [text], device, embedding_mode)[0].cpu().numpy()
+    return get_embeddings(model, tokenizer, acronym, [text], device, embedding_mode).squeeze()
 
 
 def process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels, MAX_EXAMPLES):
