@@ -5,7 +5,7 @@ import numpy as np
 
 
 terms = json.load(open("wikipedia_parsing/ambiguous_term_to_senses.json"))
-data = [len(term) for term in terms]
+data = [len(term) for term in terms.values()]
 plt.hist(data, bins=np.arange(1, max(data) + 2))
 plt.ylabel("Frequency")
 plt.xlabel("Number of Senses")
