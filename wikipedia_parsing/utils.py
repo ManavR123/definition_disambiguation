@@ -1,10 +1,12 @@
 from string import punctuation
 
+def is_ascii(term):
+    return all(ord(c) < 128 for c in term)
 
 def valid_sense(option, term):
     option, term = option.lower(), term.lower()
     return (
-        option.isascii()
+        is_ascii(option)
         and "," not in option
         and "film" not in option
         and "band" not in option
@@ -43,4 +45,4 @@ def valid_sense(option, term):
 
 
 def invalid_term(term):
-    return any(char.isdigit() for char in term) or any(p in term for p in punctuation) or not term.isascii()
+    return any(char.isdigit() for char in term) or any(p in term for p in punctuation) or not is_ascii(term)
