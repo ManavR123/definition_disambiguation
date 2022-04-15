@@ -55,9 +55,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--expansions", type=str, default="sense_distribution/ambiguous_term_to_senses.json")
-    parser.add_argument("--summaries", type=str, default="sense_distribution/ambiguous_terms.tsv")
-    parser.add_argument("--output", type=str, default="sense_distribution/boxplot.png")
+    parser.add_argument("--expansions", type=str, default="wikipedia_parsing/ambiguous_term_to_senses.json")
+    parser.add_argument("--summaries", type=str, default="wikipedia_parsing/ambiguous_terms.tsv")
+    parser.add_argument("--output", type=str, default="sense_distribution/ambiguous_boxplot.png")
     parser.add_argument("--title", type=str, default="Distances between senses of ambiguous terms")
     args = parser.parse_args()
     main(args)
