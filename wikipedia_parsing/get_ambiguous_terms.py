@@ -1,5 +1,4 @@
 import json
-import random
 from collections import defaultdict
 
 import pandas as pd
@@ -8,8 +7,6 @@ from tqdm import tqdm
 
 from wikipedia_parsing.utils import invalid_term, valid_sense
 
-random.seed(42)
-MAX_TERMS = 500
 
 with open("wikipedia_parsing/categories.txt", "r") as f:
     categories = f.read().splitlines()
@@ -19,6 +16,7 @@ rows = []
 seen_terms = set()
 with open("wikipedia_parsing/ambiguous_terms_log.txt", "w") as f:
     for category in tqdm(categories):
+        count = 0
         terms = wikipedia.page(category, auto_suggest=False).links
         for term in tqdm(terms):
             if term.lower() in seen_terms or invalid_term(term):
@@ -35,13 +33,22 @@ with open("wikipedia_parsing/ambiguous_terms_log.txt", "w") as f:
                         summary = wikipedia.summary(t, redirect=False, auto_suggest=False)
                         rows.append([t, " ".join(summary.replace("\n", " ").split())])
                         term_to_sense[term].append(t)
-                        print(f"{term} -> {t}", file=f)
-                    except (wikipedia.exceptions.RedirectError, wikipedia.exceptions.PageError) as e:
+                        print(f"{len(term_to_sense)}: {term} -> {t}", file=f)
+                    except (
+                        wikipedia.exceptions.RedirectError,
+                        wikipedia.exceptions.PageError,
+                        wikipedia.exceptions.DisambiguationError,
+                    ) as e:
                         continue
             except (wikipedia.exceptions.PageError, wikipedia.exceptions.RedirectError):
                 continue
 
-            if len(term_to_sense) >= MAX_TERMS:
+            if len(term_to_sense[term]) < 2:
+                del term_to_sense[term]
+            else:
+                count += 1
+
+            if count >= 100:
                 break
 
 print(f"Found {len(term_to_sense)} terms")
