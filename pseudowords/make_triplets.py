@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.metrics import pairwise_distances
 from tqdm import tqdm
 
-ADJUSTMENT = 2.9
+ADJUSTMENT = 2.23
 
 
 def get_embed_matrix(term_embeds):
