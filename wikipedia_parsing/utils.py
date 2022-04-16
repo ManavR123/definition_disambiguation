@@ -46,7 +46,7 @@ def valid_sense(option, term):
         and "all pages with titles containing" not in option
         and term in option
         and not any(char.isdigit() for char in term)
-        and re.match(f"{term} \([A-Za-z]+\)", option) is not None
+        and re.match(f"{term} \([a-z\s]+\)", option) is not None
     )
 
 
