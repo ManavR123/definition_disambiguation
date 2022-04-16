@@ -31,7 +31,8 @@ def get_examples(paper_data, term):
     for para in text:
         sents = sent_tokenize(para)
         for sent in sents:
-            if term.lower() in sent.lower():
+            sent = sent.lower().replace("-", " ")
+            if term in sent:
                 examples.append(sent)
     return examples
 
@@ -48,9 +49,9 @@ def main(args):
                 for example in examples:
                     term_examples.append(
                         {
-                            "acronym": pseudoword.lower(),
+                            "acronym": pseudoword,
                             "expansion": term,
-                            "text": example.replace(term.lower(), pseudoword.lower()),
+                            "text": example.replace(term, pseudoword),
                             "paper_data": paper,
                         }
                     )

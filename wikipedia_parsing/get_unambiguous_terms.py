@@ -62,6 +62,7 @@ with open("wikipedia_parsing/log.txt", "w") as f:
             if term_count >= 100:
                 print(green + "Accepted:" + end, term, term_count, file=f, flush=True)
                 summary = " ".join(summary.replace("\n", " ").split())
+                term = term.lower().replace('–', " ").replace("-", " ")
                 rows.append([term, category, term_count, summary])
             else:
                 print(red + "Rejected:" + end, term, term_count, file=f, flush=True)
