@@ -15,8 +15,7 @@ def get_baseline_embedding(model, tokenizer, acronym, device, text, embedding_mo
     return get_embeddings(model, tokenizer, acronym, [text], device, embedding_mode).squeeze()
 
 
-def process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels, MAX_EXAMPLES):
-    sents.extend(get_examples(text, acronym, paper_data, MAX_EXAMPLES))
+def process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels):
     seen_papers.add(paper_id)
 
     if levels <= 0:
@@ -27,7 +26,7 @@ def process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, level
             continue
         try:
             cite_data = es.get(index="s2orc", id=cite)["_source"]
-            process_paper(text, acronym, cite_data, cite, sents, seen_papers, levels - 1, MAX_EXAMPLES)
+            process_paper(text, acronym, cite_data, cite, sents, seen_papers, levels - 1)
         except NotFoundError:
             print(f"Could not find {cite}")
 
@@ -51,11 +50,12 @@ def get_paper_average_embedding(
 
 def average_embedding_helper(model, tokenizer, device, acronym, paper_data, text, levels, MAX_EXAMPLES, embedding_mode):
     sents = [text]
+    sents.extend(get_examples(text, acronym, paper_data, MAX_EXAMPLES))
     seen_papers = set()
     paper_model.to(device)
 
     paper_id = paper_data["paper_id"]
-    process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels, MAX_EXAMPLES)
+    process_paper(text, acronym, paper_data, paper_id, sents, seen_papers, levels)
 
     X = embed_sents(model, tokenizer, device, acronym, embedding_mode, sents)
 
