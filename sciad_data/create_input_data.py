@@ -9,14 +9,14 @@ from tqdm import tqdm
 es = Elasticsearch(hosts=["http://localhost:9200"], timeout=60, retry_on_timeout=True)
 
 
-def get_examples(text, acronym, expansion, paper_data, max_examples):
+def get_examples(text, acronym, paper_data, max_examples):
     examples = []
     for para in paper_data.get("pdf_parse", []):
         sents = sent_tokenize(para)
         for sent in sents:
             if len(examples) >= max_examples:
                 return examples
-            if acronym in sent and expansion not in sent and text not in sent:
+            if acronym in sent and text not in sent:
                 examples.append(sent)
     return examples
 
@@ -51,9 +51,8 @@ def main(args):
         paper_data = json.loads(row["paper_data"])
         paper_id = paper_data["paper_id"]
         acronym = row["acronym"]
-        expansion = row["expansion"]
 
-        sents = get_examples(row["text"], acronym, expansion, paper_data, args.max_examples)
+        sents = get_examples(row["text"], acronym, paper_data, args.max_examples)
         examples.append([row["text"]] + sents)
 
         seen_papers = set()

@@ -49,6 +49,8 @@ def record_results(logfile, predictions, golds):
         for name, score in [("accuracy", acc), ("F1", f1), ("Precision", prec), ("Recall", rec)]:
             print(f"{name}: {score}", file=f)
             scores[name] = score
+    with open(f"predictions/{wandb.run.name}_preds.txt", "w") as f:
+        f.write("\n".join(predictions))
     wandb.log(scores)
 
 
