@@ -6,14 +6,12 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
-import wandb
 
+import wandb
+from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import IdentityScoring, LinearScoring, MLPScoring
-from modeling.sent_only_sgc import get_sent_sgc_embedding
-from modeling.sgc import get_sgc_embedding
-from modeling.baseline import get_average_embedding, get_baseline_embedding, get_paper_average_embedding
-from utils_args import create_parser
 from scorer import score_expansion
+from utils_args import create_parser
 
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
@@ -54,43 +52,14 @@ def record_results(logfile, predictions, golds):
     wandb.log(scores)
 
 
-def get_target(args, model, tokenizer, acronym, paper_data, text):
-    if args.graph_mode == "SGC":
-        target, G = get_sgc_embedding(
-            model,
-            tokenizer,
-            args.device,
-            acronym,
-            paper_data,
-            text,
-            args.k,
-            args.levels,
-            args.max_examples,
-            args.embedding_mode,
-        )
-    if args.graph_mode == "SentSGC":
-        target, G = get_sent_sgc_embedding(
-            model,
-            tokenizer,
-            args.device,
-            acronym,
-            paper_data,
-            text,
-            args.k,
-            args.levels,
-            args.max_examples,
-            args.embedding_mode,
-        )
+def get_target(args, model, tokenizer, acronym, examples, paper_titles):
     if args.graph_mode == "Average":
         target, G = get_average_embedding(
             model,
             tokenizer,
             args.device,
             acronym,
-            paper_data,
-            text,
-            args.levels,
-            args.max_examples,
+            examples,
             args.embedding_mode,
         )
     if args.graph_mode == "PaperAverage":
@@ -99,22 +68,15 @@ def get_target(args, model, tokenizer, acronym, paper_data, text):
             tokenizer,
             args.device,
             acronym,
-            paper_data,
-            text,
-            args.levels,
-            args.max_examples,
+            examples,
+            paper_titles,
             args.embedding_mode,
         )
-    elif args.graph_mode == "Baseline":
-        target = get_baseline_embedding(model, tokenizer, acronym, args.device, text, args.embedding_mode)
-        G = []
     return target, G
 
 
-def eval(filename, args, logfile):
+def eval_model(filename, args, logfile):
     assert args.graph_mode in [
-        "SGC",
-        "SentSGC",
         "Average",
         "PaperAverage",
         "Baseline",
@@ -126,7 +88,7 @@ def eval(filename, args, logfile):
 
     with open("sciad_data/diction.json") as f:
         acronym_to_expansion = json.load(f)
-    df = pd.read_csv(filename).dropna(subset=["paper_data"])
+    df = pd.read_csv(filename)
 
     model = AutoModel.from_pretrained(args.model).to(args.device).eval()
     tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -148,11 +110,12 @@ def eval(filename, args, logfile):
     for _, row in tqdm(df.iterrows(), total=len(df)):
         acronym = row["acronym"]
         gold_expansion = row["expansion"]
-        paper_data = json.loads(row["paper_data"])
-        paper_id = paper_data["paper_id"]
         text = row["text"]
+        examples = eval(row["examples"])
+        paper_titles = eval(row["paper_titles"])
+        paper_id = row["paper_id"]
 
-        target, G = get_target(args, model, tokenizer, acronym, paper_data, text)
+        target, G = get_target(args, model, tokenizer, acronym, examples, paper_titles)
         pred_scores, best = get_prediction(
             expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, args.device
         )
@@ -191,4 +154,4 @@ if __name__ == "__main__":
     wandb.init(project=f"{args.project}_eval")
     wandb.config.update(args)
 
-    eval(args.file, args, logfile)
+    eval_model(args.file, args, logfile)
