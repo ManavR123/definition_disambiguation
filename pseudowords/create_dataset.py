@@ -52,7 +52,7 @@ def main(args):
                             "acronym": pseudoword,
                             "expansion": term,
                             "text": example.replace(term, pseudoword),
-                            "paper_data": paper,
+                            "paper_data": json.dumps(paper),
                         }
                     )
 
