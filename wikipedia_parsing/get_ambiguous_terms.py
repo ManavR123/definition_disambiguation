@@ -54,8 +54,7 @@ with open("wikipedia_parsing/ambiguous_terms_log.txt", "w") as f:
             else:
                 count += 1
 
-            if count >= 100:
-                break
+        print(f"{category}: {count}")
 
 print(f"Found {len(term_to_sense)} terms")
 print(f"Found {len(rows)} senses")
