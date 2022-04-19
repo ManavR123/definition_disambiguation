@@ -33,9 +33,11 @@ def main(args):
     train_2 = train_1[~mask]
     test_new_senses = train_1[mask]
 
-    train, test_not_new = train_test_split(train_2, test_size=0.1, random_state=42)
+    train_3, test_not_new = train_test_split(train_2, test_size=0.1, random_state=42)
+    train, dev = train_test_split(train_3, test_size=0.1, random_state=42)
 
     train.to_csv("pseudowords/pseudowords_train.csv", index=False)
+    dev.to_csv("pseudowords/pseudowords_dev.csv", index=False)
     test_new_pseudowords.to_csv("pseudowords/pseudowords_test_new_pseudowords.csv", index=False)
     test_new_senses.to_csv("pseudowords/pseudowords_test_new_senses.csv", index=False)
     test_not_new.to_csv("pseudowords/pseudowords_test_not_new.csv", index=False)
