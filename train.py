@@ -20,7 +20,7 @@ def setup_train(args):
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
     wandb.config.update({f"expansion-embedding-{k}": v for k, v in expansion_embeddings.items() if "arg" in k})
     expansion_embeddings = expansion_embeddings["expansion_embeddings"]
-    with open("sciad_data/diction.json") as f:
+    with open(args.dictionary) as f:
         acronym_to_expansion = json.load(f)
     df = pd.read_csv(args.file)
 
