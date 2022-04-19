@@ -19,6 +19,8 @@ def get_word_idx(acronym, inputs, sents):
             if sents[i][start:end] == acronym:
                 word_idx.append(id)
                 break
+        else:
+            word_idx.append(None)
     return word_idx
 
 
