@@ -22,7 +22,7 @@ def setup_train(args):
     expansion_embeddings = expansion_embeddings["expansion_embeddings"]
     with open(args.dictionary) as f:
         acronym_to_expansion = json.load(f)
-    df = pd.read_csv(args.file)
+    df = pd.read_csv(args.file).sample(frac=1.0)
 
     filename = f"models/{args.scoring_model}_{wandb.run.name}.pt"
 
