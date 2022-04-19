@@ -31,7 +31,7 @@ def main(args):
     term_embeddings = {}
     term_to_summary = {}
     for i, term in enumerate(df["term"].tolist()):
-        term_embeddings[term] = embeds[i]
+        term_embeddings[term] = embeds[i].reshape(1, -1)
         term_to_summary[term] = summaries[i]
 
     output = {"expansion_embeddings": term_embeddings, "expansion_to_sents": term_to_summary}
