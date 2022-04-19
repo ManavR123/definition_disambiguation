@@ -1,5 +1,4 @@
 import json
-import time
 
 import numpy as np
 import pandas as pd
@@ -7,12 +6,10 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
-import wandb
 
+import wandb
 from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import LinearScoring, MLPScoring
-from modeling.sent_only_sgc import get_sent_sgc_embedding
-from modeling.sgc import get_sgc_embedding
 from utils_args import create_parser
 
 
@@ -25,7 +22,7 @@ def setup_train(args):
     expansion_embeddings = expansion_embeddings["expansion_embeddings"]
     with open("sciad_data/diction.json") as f:
         acronym_to_expansion = json.load(f)
-    df = pd.read_csv(args.file).dropna(subset=["paper_data"])
+    df = pd.read_csv(args.file)
 
     filename = f"models/{args.scoring_model}_{wandb.run.name}.pt"
 
@@ -45,43 +42,14 @@ def setup_train(args):
     return expansion_embeddings, acronym_to_expansion, df, filename, model, tokenizer, scoring_model, optim
 
 
-def get_target(args, model, tokenizer, acronym, text, paper_data):
-    if args.graph_mode == "SGC":
-        target, _ = get_sgc_embedding(
-            model,
-            tokenizer,
-            args.device,
-            acronym,
-            paper_data,
-            text,
-            args.k,
-            args.levels,
-            args.max_examples,
-            args.embedding_mode,
-        )
-    if args.graph_mode == "SentSGC":
-        target, _ = get_sent_sgc_embedding(
-            model,
-            tokenizer,
-            args.device,
-            acronym,
-            paper_data,
-            text,
-            args.k,
-            args.levels,
-            args.max_examples,
-            args.embedding_mode,
-        )
+def get_target(args, model, tokenizer, acronym, examples, paper_titles):
     if args.graph_mode == "Average":
         target, _ = get_average_embedding(
             model,
             tokenizer,
             args.device,
             acronym,
-            paper_data,
-            text,
-            args.levels,
-            args.max_examples,
+            examples,
             args.embedding_mode,
         )
     if args.graph_mode == "PaperAverage":
@@ -90,10 +58,8 @@ def get_target(args, model, tokenizer, acronym, text, paper_data):
             tokenizer,
             args.device,
             acronym,
-            paper_data,
-            text,
-            args.levels,
-            args.max_examples,
+            examples,
+            paper_titles,
             args.embedding_mode,
         )
     return target
@@ -117,10 +83,12 @@ def train(args):
     step, batch_loss = 1, 0.0
     for _ in range(args.num_epochs):
         for _, row in tqdm(df.iterrows(), total=len(df)):
-            acronym, gold_expansion, text = row["acronym"], row["expansion"], row["text"]
-            paper_data = json.loads(row["paper_data"])
+            acronym = row["acronym"]
+            gold_expansion = row["expansion"]
+            examples = eval(row["examples"])
+            paper_titles = eval(row["paper_titles"])
 
-            target = get_target(args, model, tokenizer, acronym, text, paper_data)
+            target = get_target(args, model, tokenizer, acronym, examples, paper_titles)
             loss = get_loss(
                 expansion_embeddings, scoring_model, acronym, target, gold_expansion, acronym_to_expansion, args.device
             )
