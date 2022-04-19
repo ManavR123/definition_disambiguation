@@ -46,13 +46,16 @@ def main(args):
             term_examples = []
             for paper in res:
                 examples = get_examples(paper, term)
-                for example in examples:
+                for j, text in enumerate(examples):
+                    extra_text = examples[(j + 1) % len(examples)].replace(term, pseudoword)
                     term_examples.append(
                         {
                             "acronym": pseudoword,
                             "expansion": term,
-                            "text": example.replace(term, pseudoword),
-                            "paper_data": json.dumps(paper),
+                            "text": text.replace(term, pseudoword),
+                            "examples": [text.replace(term, pseudoword), extra_text],
+                            "paper_titles": [paper["title"]],
+                            "paper_id": paper["paper_id"],
                         }
                     )
 
@@ -63,7 +66,7 @@ def main(args):
                 print(f"{pseudoword} {term} only has {len(term_examples)} examples, expected at least {k}")
                 k = len(term_examples)
 
-            rows.extend(random.choices(term_examples, k=k))
+            rows.extend(random.sample(term_examples, k=k))
 
     print(f"Found {len(rows)} examples")
     df = pd.DataFrame(rows)
