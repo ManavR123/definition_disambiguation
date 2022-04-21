@@ -6,6 +6,7 @@ from typing import Dict, List
 import pandas as pd
 import torch
 import torch.nn.functional as F
+from transformers import AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 import wandb
@@ -58,7 +59,10 @@ def main(args):
     )
 
     bem_model = BEM(args.model_name).train().to(args.device)
-    optim = torch.optim.Adam(bem_model.parameters(), lr=args.lr)
+    optim = AdamW(bem_model.parameters(), lr=args.lr, eps=1e-8)
+    scheduler = get_linear_schedule_with_warmup(
+        optim, num_warmup_steps=10000, num_training_steps=len(dataloader) * args.num_epochs
+    )
     wandb.watch(bem_model, log="all", log_freq=args.log_every)
 
     step, batch_loss = 0, torch.tensor(0.0).to(args.device)
@@ -83,6 +87,7 @@ def main(args):
             loss.backward()
             batch_loss += loss.detach()
             optim.step()
+            scheduler.step()
 
             step += 1
             if step % args.log_every == 0:
@@ -105,10 +110,10 @@ if __name__ == "__main__":
     parser.add_argument("--sense_dictionary", help="The dictionary to use.", default="wikipedia_parsing/terms.tsv")
     parser.add_argument("--project", type=str, help="The project to use.", default="pseudowords")
     parser.add_argument("--device", help="The device to run on.", default="cuda:1")
-    parser.add_argument("--lr", type=float, default=0.001)
+    parser.add_argument("--lr", type=float, default=1e-5)
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--num_epochs", type=int, default=10)
-    parser.add_argument("--log_every", type=int, default=100)
+    parser.add_argument("--log_every", type=int, default=1000)
     parser.add_argument("--model_name", type=str, default="bert-base-uncased")
     args = parser.parse_args()
     main(args)
