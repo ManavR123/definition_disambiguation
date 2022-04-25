@@ -10,7 +10,7 @@ from transformers import AutoModel, AutoTokenizer
 import wandb
 from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import IdentityScoring, LinearScoring, MLPScoring
-from scorer import score_expansion
+from scorer import record_results
 from utils_args import create_parser
 
 
@@ -39,19 +39,6 @@ def record_error(mode, logfile, gold_expansion, paper_id, text, graph_size, pred
         print(f"Paper ID: {paper_id}", file=f)
         if mode != "Baseline":
             print(f"Graph Size: {graph_size}", file=f)
-
-
-def record_results(logfile, predictions, golds):
-    scores = {}
-    with open(logfile, "a") as f:
-        print("**********************************************************", file=f)
-        acc, prec, rec, f1 = score_expansion(golds, predictions)
-        for name, score in [("accuracy", acc), ("F1", f1), ("Precision", prec), ("Recall", rec)]:
-            print(f"{name}: {score}", file=f)
-            scores[name] = score
-    with open(f"predictions/{wandb.run.name}_preds.txt", "w") as f:
-        f.write("\n".join(predictions))
-    wandb.log(scores)
 
 
 def get_target(args, model, tokenizer, acronym, examples, paper_titles):

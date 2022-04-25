@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import wandb
+
 
 def score_expansion(key, prediction):
     correct = 0
@@ -31,3 +33,16 @@ def score_expansion(key, prediction):
     macro_f1 = 2 * macro_prec * macro_recall / (macro_prec + macro_recall) if macro_prec + macro_recall != 0 else 0
 
     return acc, macro_prec, macro_recall, macro_f1
+
+
+def record_results(logfile, predictions, golds):
+    scores = {}
+    with open(logfile, "a") as f:
+        print("**********************************************************", file=f)
+        acc, prec, rec, f1 = score_expansion(golds, predictions)
+        for name, score in [("Accuracy", acc), ("F1", f1), ("Precision", prec), ("Recall", rec)]:
+            print(f"{name}: {score}", file=f)
+            scores[name] = score
+    with open(f"predictions/{wandb.run.name}_preds.txt", "w") as f:
+        f.write("\n".join(predictions))
+    wandb.log(scores)
