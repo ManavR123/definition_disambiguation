@@ -5,19 +5,19 @@ import json
 import pandas as pd
 import torch
 import torch.nn.functional as F
-from transformers import AdamW, get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from transformers import AdamW, get_linear_schedule_with_warmup
 import wandb
-from data.dataset import WSDDataset
 
-from modeling.bem import BEM, create_input, get_scores
+from data.dataset import WSDDataset
+from modeling.stardust import Stardust
 
 
 def main(args):
     wandb.init(project=f"{args.project}_train")
     wandb.config.update(args)
-    filename = f"models/BEM_{wandb.run.name}.pt"
+    filename = f"models/Stardust_{wandb.run.name}.pt"
 
     with open(args.word_to_senses) as f:
         word_to_senses = json.load(f)
@@ -28,26 +28,38 @@ def main(args):
         dataset, batch_size=args.batch_size, collate_fn=dataset.collate_fn, prefetch_factor=4, num_workers=8
     )
 
-    bem_model = BEM(args.model_name).train().to(args.device)
-    optim = AdamW(bem_model.parameters(), lr=args.lr, eps=1e-8)
+    model = Stardust(
+        args.model_name,
+        hidden_size=128,
+        tie_context_gloss_encoder=True,
+        freeze_context_encoder=args.freeze_context_encoder,
+        freeze_gloss_encoder=args.freeze_gloss_encoder,
+        freeze_paper_encoder=args.freeze_paper_encoder,
+    )
+    model.train().to(args.device)
+    optim = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
     scheduler = get_linear_schedule_with_warmup(
         optim, num_warmup_steps=10000, num_training_steps=len(dataloader) * args.num_epochs
     )
-    wandb.watch(bem_model, log="all", log_freq=args.log_every)
+    wandb.watch(model, log="all", log_freq=args.log_every)
 
     step, batch_loss = 0, torch.tensor(0.0).to(args.device)
     for _ in tqdm(range(args.num_epochs)):
         for batch in tqdm(dataloader, total=len(dataloader)):
             optim.zero_grad()
 
-            encoded_contexts, encoded_glosses = create_input(
-                bem_model.tokenizer, batch["text"], list(itertools.chain(*batch["glosses"])), args.device
+            encoded_contexts, encoded_glosses, encoded_papers = model.create_input(
+                batch["text"], list(itertools.chain(*batch["glosses"])), batch["paper_titles"], args.device
             )
-            context_embeddings, gloss_embeddings = bem_model(encoded_contexts, encoded_glosses)
-            scores = get_scores(
-                encoded_contexts,
+            context_embeddings, gloss_embeddings, paper_embeddings = model(
+                encoded_contexts, encoded_glosses, encoded_papers
+            )
+            scores = model.get_scores(
                 context_embeddings,
                 gloss_embeddings,
+                paper_embeddings,
+                encoded_contexts,
+                encoded_glosses,
                 batch["text"],
                 batch["acronym"],
                 batch["glosses"],
@@ -64,7 +76,7 @@ def main(args):
                 wandb.log({"loss": batch_loss.item() / args.log_every})
                 batch_loss = torch.tensor(0.0).to(args.device)
 
-        torch.save(bem_model.state_dict(), filename)
+        torch.save(model.state_dict(), filename)
         wandb.save(filename)
 
 
@@ -85,5 +97,8 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=10)
     parser.add_argument("--log_every", type=int, default=1000)
     parser.add_argument("--model_name", type=str, default="bert-base-uncased")
+    parser.add_argument("--freeze_context_encoder", action="store_true")
+    parser.add_argument("--freeze_gloss_encoder", action="store_true")
+    parser.add_argument("--freeze_paper_encoder", action="store_true")
     args = parser.parse_args()
     main(args)

@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 import wandb
 
-from data.bem_dataset import WSDDataset
+from data.dataset import WSDDataset
 from modeling.bem import BEM, create_input, get_scores
 from scorer import record_results
 

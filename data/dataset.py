@@ -25,6 +25,7 @@ class WSDDataset(Dataset):
                     "labels": labels,
                     "glosses": glosses,
                     "expansion": row["expansion"],
+                    "paper_titles": eval(row["paper_titles"])[0],
                     "paper_id": row["paper_id"],
                 }
             )
@@ -42,4 +43,5 @@ class WSDDataset(Dataset):
             "acronym": [item["acronym"] for item in batch],
             "labels": torch.cat([item["labels"] for item in batch], dim=0),
             "glosses": [item["glosses"] for item in batch],
+            "paper_titles": [item["paper_titles"] for item in batch],
         }
