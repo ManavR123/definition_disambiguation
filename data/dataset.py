@@ -7,10 +7,20 @@ from torch.utils.data import Dataset
 
 
 class WSDDataset(Dataset):
-    def __init__(self, train_data: pd.DataFrame, word_to_senses: Dict[str, str], sense_to_gloss: pd.DataFrame):
-        data = train_data
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        word_to_senses: Dict[str, List[str]],
+        sense_to_gloss: pd.DataFrame,
+        is_train: bool = False,
+    ):
         word_to_senses = word_to_senses
         sense_to_gloss = {row["term"]: row["summary"] for _, row in sense_to_gloss.iterrows()}
+
+        if is_train:
+            unique_expansions = set(data["expansion"].unique())
+            for word in word_to_senses:
+                word_to_senses[word] = [sense for sense in word_to_senses[word] if sense in unique_expansions]
 
         self.batches = []
         for _, row in tqdm(data.iterrows(), total=len(data)):
@@ -30,14 +40,14 @@ class WSDDataset(Dataset):
                 }
             )
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.batches)
 
-    def __getitem__(self, idx: int):
+    def __getitem__(self, idx: int) -> Dict[str, any]:
         return self.batches[idx]
 
     @staticmethod
-    def collate_fn(batch: Dict[str, List[any]]):
+    def collate_fn(batch: Dict[str, any]) -> Dict[str, any]:
         return {
             "text": [item["text"] for item in batch],
             "acronym": [item["acronym"] for item in batch],

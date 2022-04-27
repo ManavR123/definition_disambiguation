@@ -23,7 +23,7 @@ def main(args):
         word_to_senses = json.load(f)
     sense_to_gloss = pd.read_csv(args.sense_dictionary, sep="\t")
     train = pd.read_csv(args.file).sample(frac=1.0, random_state=42)
-    dataset = WSDDataset(train, word_to_senses, sense_to_gloss)
+    dataset = WSDDataset(train, word_to_senses, sense_to_gloss, is_train=True)
     dataloader = DataLoader(
         dataset, batch_size=args.batch_size, collate_fn=dataset.collate_fn, prefetch_factor=4, num_workers=8
     )
