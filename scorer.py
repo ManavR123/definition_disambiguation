@@ -35,6 +35,16 @@ def score_expansion(key, prediction):
     return acc, macro_prec, macro_recall, macro_f1
 
 
+def record_error(logfile, batch, pred, scores):
+    with open(logfile, "a") as f:
+        print("==========================================================", file=f)
+        print(f"Text: {batch['text']}", file=f)
+        print(f"Prediction: {pred}", file=f)
+        print(f"Gold: {batch['expansion']}", file=f)
+        print(f"Scores: {scores}", file=f)
+        print(f"Paper ID: {batch['paper_id']}", file=f)
+
+
 def record_results(logfile, predictions, golds):
     scores = {}
     with open(logfile, "a") as f:
