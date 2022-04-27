@@ -6,6 +6,18 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 
+def get_most_frequent_senses(df):
+    return set(
+        df.groupby(["acronym", "expansion"], group_keys=False)
+        .agg({"expansion": ["count"]})
+        .sort_values(["acronym", ("expansion", "count")], ascending=True)
+        .groupby("acronym")
+        .tail(1)
+        .reset_index()["expansion"][""]
+        .tolist()
+    )
+
+
 def main(args):
     random.seed(args.seed)
     diction = json.load(open(args.dictionary, "r"))
@@ -36,11 +48,18 @@ def main(args):
     train_3, test_not_new = train_test_split(train_2, test_size=0.1, random_state=42)
     train, dev = train_test_split(train_3, test_size=0.1, random_state=42)
 
+    mfs = get_most_frequent_senses(dataset)
+    mask = test_not_new["expansion"].isin(mfs)
+    test_mfs = test_not_new[mask]
+    test_lfs = test_not_new[~mask]
+
     train.to_csv("pseudowords/pseudowords_train.csv", index=False)
     dev.to_csv("pseudowords/pseudowords_dev.csv", index=False)
     test_new_pseudowords.to_csv("pseudowords/pseudowords_test_new_pseudowords.csv", index=False)
     test_new_senses.to_csv("pseudowords/pseudowords_test_new_senses.csv", index=False)
     test_not_new.to_csv("pseudowords/pseudowords_test_not_new.csv", index=False)
+    test_mfs.to_csv("pseudowords/pseudowords_test_mfs.csv", index=False)
+    test_lfs.to_csv("pseudowords/pseudowords_test_lfs.csv", index=False)
 
 
 if __name__ == "__main__":
