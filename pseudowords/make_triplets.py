@@ -11,7 +11,7 @@ def get_embed_matrix(term_embeds):
     for i, (term, embed) in enumerate(term_embeds.items()):
         idx_to_term[i] = term
         embeds.append(embed)
-    embeds = np.array(embeds)
+    embeds = np.array(embeds).squeeze()
     return idx_to_term, embeds
 
 
