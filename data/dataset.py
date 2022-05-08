@@ -25,7 +25,7 @@ class WSDDataset(Dataset):
         self.batches = []
         for _, row in tqdm(data.iterrows(), total=len(data)):
             text = row["text"]
-            acronym = row["acronym"]
+            acronym = row["acronym"].lower()
             labels = torch.Tensor([sense == row["expansion"] for sense in word_to_senses[acronym]]).float()
             glosses = [sense_to_gloss[sense] for sense in word_to_senses[acronym]]
             self.batches.append(
