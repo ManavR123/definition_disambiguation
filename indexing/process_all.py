@@ -43,7 +43,7 @@ def process_shard(id):
     create_index()
     add_shard_to_index(id)
 
-    for file in ["train.csv", "dev.csv", "test.csv"]:
+    for file in ["train.csv", "dev.csv"]:
         search_file(file)
 
     delete_index()

@@ -31,5 +31,5 @@ def convert_format(file):
     )
 
 
-for file in ["train.json", "dev.json", "test.json"]:
+for file in ["train.json", "dev.json"]:
     convert_format(file)
