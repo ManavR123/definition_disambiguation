@@ -69,19 +69,17 @@ def get_knn_pseudowords(term_embeds, adjustment):
 
 
 def main(args):
-    term_embeds = np.load("pseudowords/terms_embed.npy", allow_pickle=True)[()]["expansion_embeddings"]
-
-    if args.mode == "kNN":
-        expansions = get_knn_pseudowords(term_embeds, args.adjustment)
+    term_embeds = np.load(args.file, allow_pickle=True)[()]["expansion_embeddings"]
+    expansions = get_knn_pseudowords(term_embeds, args.adjustment)
 
     # save expansions to json
-    with open(f"pseudowords/pseudoword_{args.mode}_{args.adjustment}_expansions.json", "w") as f:
+    with open(f"pseudowords/pseudoword_kNN_{args.adjustment}_expansions.json", "w") as f:
         json.dump(expansions, f)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", type=str, default="kNN")
+    parser.add_argument("file", type=str, help="path to embeddings file", default="pseudowords/terms_embed.npy")
     parser.add_argument("--adjustment", type=float, default=2.23)
     args = parser.parse_args()
     main(args)
