@@ -1,6 +1,6 @@
 import argparse
 import random
-from itsdangerous import json
+import json
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,6 +55,7 @@ def main(args):
         for func in [np.min, np.max, np.median]:
             print(f"{name} {func.__name__}", func(d))
         print("-" * 80)
+    return mins
 
 
 if __name__ == "__main__":
