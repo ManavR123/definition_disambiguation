@@ -10,7 +10,7 @@ from transformers import AutoModel, AutoTokenizer
 import wandb
 from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import LinearScoring, MLPScoring
-from utils_args import create_parser
+from utils.utils_args import create_parser
 
 
 def setup_train(args):

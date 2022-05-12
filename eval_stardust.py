@@ -9,7 +9,7 @@ from tqdm import tqdm
 import wandb
 from data.dataset import WSDDataset
 from modeling.stardust import Stardust
-from scorer import record_error, record_results
+from utils.scorer import record_error, record_results
 
 
 def main(args):

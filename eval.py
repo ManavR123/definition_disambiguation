@@ -10,8 +10,8 @@ from transformers import AutoModel, AutoTokenizer
 import wandb
 from modeling.baseline import get_average_embedding, get_paper_average_embedding
 from modeling.scoring_models import IdentityScoring, LinearScoring, MLPScoring
-from scorer import record_results
-from utils_args import create_parser
+from utils.scorer import record_results
+from utils.utils_args import create_parser
 
 
 def get_prediction(expansion_embeddings, scoring_model, acronym, target, acronym_to_expansion, device):
