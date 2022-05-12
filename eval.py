@@ -69,7 +69,7 @@ def eval_model(filename, args, logfile):
         "Average",
         "PaperAverage",
         "Baseline",
-    ], f"Mode must be either SGC, SentSGC, Average, PaperAverage or Baseline\nGot: {args.graph_mode}"
+    ], f"Mode must be either Average, PaperAverage or Baseline\nGot: {args.graph_mode}"
 
     expansion_embeddings = np.load(args.expansion_embeddings_path, allow_pickle=True)[()]
     wandb.config.update({f"expansion-embedding-{k}": v for k, v in expansion_embeddings.items() if "arg" in k})
