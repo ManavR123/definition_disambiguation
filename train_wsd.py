@@ -1,5 +1,4 @@
 import argparse
-import itertools
 import json
 
 import pandas as pd
@@ -11,13 +10,32 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 import wandb
 
 from data.dataset import WSDDataset
+from modeling.bem import BEM
 from modeling.stardust import Stardust
+from modeling.wsd_model import WSDModel
+
+
+def initialize_model(args) -> WSDModel:
+    if args.model_type == "BEM":
+        model = BEM(args.model_name)
+    elif args.model_type == "Stardust":
+        model = Stardust(
+            args.model_name,
+            hidden_size=128,
+            tie_context_gloss_encoder=True,
+            freeze_context_encoder=args.freeze_context_encoder,
+            freeze_gloss_encoder=args.freeze_gloss_encoder,
+            freeze_paper_encoder=args.freeze_paper_encoder,
+        )
+    else:
+        raise ValueError(f"Unknown model type: {args.model_type}")
+    return model.train().to(args.device)
 
 
 def main(args):
     wandb.init(project=f"{args.project}_train")
     wandb.config.update(args)
-    filename = f"models/Stardust_{wandb.run.name}.pt"
+    filename = f"models/{args.model_type}_{wandb.run.name}.pt"
 
     with open(args.word_to_senses) as f:
         word_to_senses = json.load(f)
@@ -28,15 +46,7 @@ def main(args):
         dataset, batch_size=args.batch_size, collate_fn=dataset.collate_fn, prefetch_factor=4, num_workers=8
     )
 
-    model = Stardust(
-        args.model_name,
-        hidden_size=128,
-        tie_context_gloss_encoder=True,
-        freeze_context_encoder=args.freeze_context_encoder,
-        freeze_gloss_encoder=args.freeze_gloss_encoder,
-        freeze_paper_encoder=args.freeze_paper_encoder,
-    )
-    model.train().to(args.device)
+    model = initialize_model(args)
     optim = AdamW(model.parameters(), lr=args.lr, eps=1e-8)
     scheduler = get_linear_schedule_with_warmup(
         optim, num_warmup_steps=10000, num_training_steps=len(dataloader) * args.num_epochs
@@ -48,23 +58,8 @@ def main(args):
         for batch in tqdm(dataloader, total=len(dataloader)):
             optim.zero_grad()
 
-            encoded_contexts, encoded_glosses, encoded_papers = model.create_input(
-                batch["text"], list(itertools.chain(*batch["glosses"])), batch["paper_titles"], args.device
-            )
-            context_embeddings, gloss_embeddings, paper_embeddings = model(
-                encoded_contexts, encoded_glosses, encoded_papers
-            )
-            scores = model.get_scores(
-                context_embeddings,
-                gloss_embeddings,
-                paper_embeddings,
-                encoded_contexts,
-                encoded_glosses,
-                batch["text"],
-                batch["acronym"],
-                batch["glosses"],
-                args.device,
-            )
+            scores = model.get_scores(batch, args.device)
+
             loss = F.binary_cross_entropy_with_logits(scores, batch["labels"].to(args.device))
             loss.backward()
             batch_loss += loss.detach()
@@ -97,6 +92,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=int, default=10)
     parser.add_argument("--log_every", type=int, default=1000)
     parser.add_argument("--model_name", type=str, default="bert-base-uncased")
+    parser.add_argument("--model_type", type=str, default="BEM", choices=["BEM", "Stardust"])
     parser.add_argument("--freeze_context_encoder", action="store_true")
     parser.add_argument("--freeze_gloss_encoder", action="store_true")
     parser.add_argument("--freeze_paper_encoder", action="store_true")

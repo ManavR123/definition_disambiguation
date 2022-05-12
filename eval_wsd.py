@@ -5,11 +5,30 @@ import time
 import pandas as pd
 import torch
 from tqdm import tqdm
-
 import wandb
+
 from data.dataset import WSDDataset
+from modeling.bem import BEM
 from modeling.stardust import Stardust
+from modeling.wsd_model import WSDModel
 from utils.scorer import record_error, record_results
+
+
+def initialize_model(args) -> WSDModel:
+    if args.model_type == "BEM":
+        model = BEM(args.model_name)
+    elif args.model_type == "Stardust":
+        model = Stardust(
+            args.model_name,
+            hidden_size=128,
+            tie_context_gloss_encoder=True,
+            freeze_context_encoder=args.freeze_context_encoder,
+            freeze_gloss_encoder=args.freeze_gloss_encoder,
+            freeze_paper_encoder=args.freeze_paper_encoder,
+        )
+    else:
+        raise ValueError(f"Unknown model type: {args.model_type}")
+    return model
 
 
 def main(args):
@@ -22,14 +41,7 @@ def main(args):
     test_data = pd.read_csv(args.file).sample(frac=1.0, random_state=42)
     dataset = WSDDataset(test_data, word_to_senses, sense_to_gloss)
 
-    model = Stardust(
-        args.model_name,
-        hidden_size=128,
-        tie_context_gloss_encoder=True,
-        freeze_context_encoder=args.freeze_context_encoder,
-        freeze_gloss_encoder=args.freeze_gloss_encoder,
-        freeze_paper_encoder=args.freeze_paper_encoder,
-    )
+    model = initialize_model(args)
     model.load_state_dict(torch.load(args.model_ckpt))
     model.eval().to(args.device)
 
@@ -40,24 +52,8 @@ def main(args):
 
     preds, golds = [], []
     for batch in tqdm(dataset, total=len(dataset)):
-        encoded_contexts, encoded_glosses, encoded_papers = model.create_input(
-            [batch["text"]], batch["glosses"], batch["paper_titles"], args.device
-        )
         with torch.no_grad():
-            context_embeddings, gloss_embeddings, paper_embeddings = model(
-                encoded_contexts, encoded_glosses, encoded_papers
-            )
-            scores = model.get_scores(
-                context_embeddings,
-                gloss_embeddings,
-                paper_embeddings,
-                encoded_contexts,
-                encoded_glosses,
-                [batch["text"]],
-                [batch["acronym"]],
-                [batch["glosses"]],
-                args.device,
-            )
+            scores = model.step(batch, args.device)
         scores = scores.squeeze().cpu().numpy()
 
         idx = scores.argmax()
@@ -89,9 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--project", type=str, help="The project to use.", default="pseudowords")
     parser.add_argument("--device", help="The device to run on.", default="cuda:1")
     parser.add_argument("--model_name", type=str, default="bert-base-uncased")
+    parser.add_argument("--model_type", type=str, default="BEM", choices=["BEM", "Stardust"])
     parser.add_argument("--model_ckpt", type=str, required=True)
-    parser.add_argument("--freeze_context_encoder", action="store_true")
-    parser.add_argument("--freeze_gloss_encoder", action="store_true")
-    parser.add_argument("--freeze_paper_encoder", action="store_true")
     args = parser.parse_args()
     main(args)

@@ -1,11 +1,13 @@
+import itertools
 import torch
 from torch import nn
 from transformers import AutoModel, AutoTokenizer
 
 from modeling.utils_modeling import pool_embeddings
+from modeling.wsd_model import WSDModel
 
 
-class Stardust(nn.Module):
+class Stardust(WSDModel):
     def __init__(
         self,
         model_name="bert-base-uncased",
@@ -54,6 +56,12 @@ class Stardust(nn.Module):
         paper_embeddings = self.paper_encoder(**encoded_papers)
         return context_embeddings, gloss_embeddings, paper_embeddings
 
+    def create_input(self, contexts, glosses, papers, device):
+        encoded_contexts = self.tokenizer(contexts, return_tensors="pt", padding=True, truncation=True).to(device)
+        encoded_glosses = self.tokenizer(glosses, return_tensors="pt", padding=True, truncation=True).to(device)
+        encoded_papers = self.paper_tokenizer(papers, return_tensors="pt", padding=True, truncation=True).to(device)
+        return encoded_contexts, encoded_glosses, encoded_papers
+
     def get_scores(
         self,
         context_embeddings,
@@ -78,8 +86,20 @@ class Stardust(nn.Module):
         x = torch.cat([context_embeddings, gloss_embeddings, paper_embeddings], dim=-1)
         return self.model(x).squeeze(-1)
 
-    def create_input(self, contexts, glosses, papers, device):
-        encoded_contexts = self.tokenizer(contexts, return_tensors="pt", padding=True, truncation=True).to(device)
-        encoded_glosses = self.tokenizer(glosses, return_tensors="pt", padding=True, truncation=True).to(device)
-        encoded_papers = self.paper_tokenizer(papers, return_tensors="pt", padding=True, truncation=True).to(device)
-        return encoded_contexts, encoded_glosses, encoded_papers
+    def step(self, batch, device):
+        encoded_contexts, encoded_glosses, encoded_papers = self.create_input(
+            batch["text"], list(itertools.chain(*batch["glosses"])), batch["paper_titles"], device
+        )
+        context_embeddings, gloss_embeddings, paper_embeddings = self(encoded_contexts, encoded_glosses, encoded_papers)
+        scores = self.get_scores(
+            context_embeddings,
+            gloss_embeddings,
+            paper_embeddings,
+            encoded_contexts,
+            encoded_glosses,
+            batch["text"],
+            batch["acronym"],
+            batch["glosses"],
+            device,
+        )
+        return scores
