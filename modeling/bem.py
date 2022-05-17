@@ -26,7 +26,6 @@ class BEM(WSDModel):
 
     def get_scores(self, encoded_contexts, context_embeddings, gloss_embeddings, sents, words, glosses, device):
         gloss_embeddings = pool_embeddings(gloss_embeddings, "CLS", device)
-
         context_embeddings = pool_embeddings(context_embeddings, "acronym", device, words, sents, encoded_contexts)
         repeats = torch.Tensor([len(gs) for gs in glosses]).int().to(device)
         context_embeddings = torch.repeat_interleave(context_embeddings, repeats, dim=0)

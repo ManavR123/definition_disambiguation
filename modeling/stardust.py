@@ -7,6 +7,17 @@ from modeling.utils_modeling import pool_embeddings
 from modeling.wsd_model import WSDModel
 
 
+def flatten(l):
+    return list(itertools.chain(*l))
+
+
+def average_embeddings(all_embeddings, batch_texts):
+    batch_embeddings = []
+    for texts in batch_texts:
+        batch_embeddings.append(all_embeddings[len(batch_embeddings) : len(batch_embeddings) + len(texts)].mean(dim=0))
+    return torch.stack(batch_embeddings)
+
+
 class Stardust(WSDModel):
     def __init__(
         self,
@@ -72,15 +83,25 @@ class Stardust(WSDModel):
         sents,
         words,
         glosses,
+        paper_titles,
         device,
     ):
         gloss_embeddings = pool_embeddings(gloss_embeddings, "mean", device, inputs=encoded_glosses)
         repeats = torch.Tensor([len(gs) for gs in glosses]).int().to(device)
 
-        context_embeddings = pool_embeddings(context_embeddings, "acronym", device, words, sents, encoded_contexts)
+        context_embeddings = pool_embeddings(
+            context_embeddings,
+            "acronym",
+            device,
+            flatten([[word] * len(sents[i]) for i, word in enumerate(words)]),
+            flatten(sents),
+            encoded_contexts,
+        )
+        context_embeddings = average_embeddings(context_embeddings, sents)
         context_embeddings = torch.repeat_interleave(context_embeddings, repeats, dim=0)
 
         paper_embeddings = pool_embeddings(paper_embeddings, "CLS", device)
+        paper_embeddings = average_embeddings(paper_embeddings, paper_titles)
         paper_embeddings = torch.repeat_interleave(paper_embeddings, repeats, dim=0)
 
         x = torch.cat([context_embeddings, gloss_embeddings, paper_embeddings], dim=-1)
@@ -88,7 +109,7 @@ class Stardust(WSDModel):
 
     def step(self, batch, device):
         encoded_contexts, encoded_glosses, encoded_papers = self.create_input(
-            batch["text"], list(itertools.chain(*batch["glosses"])), batch["paper_titles"], device
+            flatten(batch["examples"]), flatten(batch["glosses"]), flatten(batch["paper_titles"]), device
         )
         context_embeddings, gloss_embeddings, paper_embeddings = self(encoded_contexts, encoded_glosses, encoded_papers)
         scores = self.get_scores(
@@ -97,9 +118,10 @@ class Stardust(WSDModel):
             paper_embeddings,
             encoded_contexts,
             encoded_glosses,
-            batch["text"],
+            batch["examples"],
             batch["acronym"],
             batch["glosses"],
+            batch["paper_titles"],
             device,
         )
         return scores

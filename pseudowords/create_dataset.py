@@ -53,7 +53,7 @@ def main(args):
                             "acronym": pseudoword,
                             "expansion": term,
                             "text": text.replace(term, pseudoword),
-                            "examples": [text.replace(term, pseudoword), extra_text],
+                            "examples": [text.replace(term, pseudoword), extra_text.replace(term, pseudoword)],
                             "paper_titles": [paper["title"]],
                             "paper_id": paper["paper_id"],
                         }

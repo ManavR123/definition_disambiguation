@@ -230,7 +230,10 @@ python train_wsd.py \
     --model_type <BEM or Stardust> \
     --freeze_context_encoder <Stardust only: flag to freeze context encoder> \
     --freeze_gloss_encoder  <Stardust only: flag to freeze gloss encoder> \
-    --freeze_paper_encoder  <Stardust only: flag to freeze paper encoder>
+    --freeze_paper_encoder  <Stardust only: flag to freeze paper encoder> \
+    --reduce_dict <only predict terms that are in the dataset> \
+    --context_enhancement <use context enhancement> \
+    --citation_enhancement <use citation enhancement>
 ```
 
 Then, to evaluate our model, we can use the following command:
@@ -244,12 +247,13 @@ python eval_wsd.py \
     --device <device to use> \
     --model_name <name of model to use> \
     --model_type <BEM or Stardust> \
-    --model_ckpt <path to model checkpoint to use>
+    --model_ckpt <path to model checkpoint to use> \
+    --reduce_dict <only predict terms that are in the dataset> \
+    --context_enhancement <use context enhancement>  \
+    --citation_enhancement <use citation enhancement>
 ```
 
 This will also output a log file similar to the AD model.
-
-Note: Stardust doesn't currently support Context Enhancement and Citation Graph Enhancement. However, it does support mini-batch processing unlike the AD model, which only supports batch processing via gradient accumulation. However, this should be fixed soon.
 
 ## Contact
 Please address any questions or comments about this codebase to manav.rathod@berkeley.edu.

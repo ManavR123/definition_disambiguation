@@ -41,7 +41,14 @@ def main(args):
         word_to_senses = json.load(f)
     sense_to_gloss = pd.read_csv(args.sense_dictionary, sep="\t")
     train = pd.read_csv(args.file).sample(frac=1.0, random_state=42)
-    dataset = WSDDataset(train, word_to_senses, sense_to_gloss, is_train=True)
+    dataset = WSDDataset(
+        train,
+        word_to_senses,
+        sense_to_gloss,
+        reduce_dict=args.reduce_dict,
+        context_enhancement=args.context_enhancement,
+        citation_enhancement=args.citation_enhancement,
+    )
     dataloader = DataLoader(
         dataset, batch_size=args.batch_size, collate_fn=dataset.collate_fn, prefetch_factor=4, num_workers=8
     )
@@ -58,7 +65,7 @@ def main(args):
         for batch in tqdm(dataloader, total=len(dataloader)):
             optim.zero_grad()
 
-            scores = model.get_scores(batch, args.device)
+            scores = model.step(batch, args.device)
 
             loss = F.binary_cross_entropy_with_logits(scores, batch["labels"].to(args.device))
             loss.backward()
@@ -91,6 +98,9 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=2)
     parser.add_argument("--num_epochs", type=int, default=10)
     parser.add_argument("--log_every", type=int, default=1000)
+    parser.add_argument("--reduce_dict", action="store_true", help="Whether to reduce the dictionary.")
+    parser.add_argument("--context_enhancement", action="store_true", help="Whether to use context enhancement.")
+    parser.add_argument("--citation_enhancement", action="store_true", help="Whether to use citation enhancement.")
     parser.add_argument("--model_name", type=str, default="bert-base-uncased")
     parser.add_argument("--model_type", type=str, default="BEM", choices=["BEM", "Stardust"])
     parser.add_argument("--freeze_context_encoder", action="store_true")
